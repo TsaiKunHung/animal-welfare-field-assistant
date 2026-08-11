@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { navigate } from '../router.jsx'
 import { useApp } from '../store/AppState.jsx'
-import { AiBadge } from '../components/ui.jsx'
+import PetNet, { OWNER } from '../components/petnet.jsx'
 import {
   Camera,
   Check,
@@ -15,32 +15,29 @@ import {
 } from '../components/icons.jsx'
 
 /*
-  F6 寵物資訊查詢 ★AI —— Figma page 10904:2466
-  page 名稱是「F6.5 寵物資訊查詢 ★AI（待修改為線上寵登）」，
-  **稿面現況仍是舊版「晶片查詢」流程**，線上寵登登記查詢還沒畫。以下一律照現況實作。
+  F6 寵物資訊查詢 ★AI —— Figma page「F6 寵物資訊查詢 NEW 0720 ★AI」(12486:5253)
 
-    F6-1     選擇查詢方式            (10932:5235 / 對話框 10932:5333) → view 'choose'
-    F6-2-1   晶片掃描 / 開始掃描      (10932:5492 / 10932:5590)       → view 'chipIdle'
-    F6-2-1-2 晶片掃描 / 掃描中        (11193:1430 / 11193:1528)       → view 'chipScanning'
-    F6-2-1-3 晶片掃描 / 掃描完成      (11193:1712 / 11193:1810)       → view 'chipDone'
-    F6-2-1-4 晶片掃描 / 號碼可編輯    (11193:2372 / 11193:2469)       → view 'chipEdit'
-    F6-2-1-5 晶片掃描 / 查詢中        (11193:2111 / 11193:2208)       → view 'chipQuerying'
-    F6-2-1-6 晶片掃描結果            (10932:5357 / 10932:5455)       → view 'chipResult'
-    F6-2-2   手動輸入身分證          (11178:10604 / 11178:10702)     → view 'idInput'
-    F6-2-2   系統自動帶入身分證       (11178:10879 / 11178:11130)     → view 'idInput' + 已帶入標頭
-    F6-2-2-1 身分證查詢中            (11178:19814 / 11178:19912)     → view 'idQuerying'
-    F6-2-2-2 查詢結果（選寵物）       (11190:25120 / 11190:25408)     → view 'idResult'
-    F6-2-2-3 已選擇寵物              (11193:1133 / 11193:1231)       → view 'idSelected'
+  ★ 2026-08-11 改版重點：本地假資料庫查詢已整條移除，改走官方寵登網。
+    農業部沒有開放系統介接，開發團隊無法在底層串接官方寵物登記資料庫；設計上的解法是
+    「在外勤小助手內嵌一個瀏覽器」，動檢員直接在裡面操作寵物登記管理資訊網，
+    再用「複製資料回外勤小助手」把查詢結果帶回本地紀錄。
+    寵登網本體重建在 components/petnet.jsx，Figma 稿面上那幾張是貼上去的截圖。
+
+  view 對照：
+    choose     選擇查詢方式（掃晶片／輸入飼主證件號碼）—— 只是取得「查詢條件」
+    chipIdle   晶片掃描 / 待掃描
+    chipScanning / chipFail / chipDone / chipEdit   掃描中 / 失敗 / 完成 / 號碼可編輯
+    idInput    手動輸入（或由 F5 自動帶入）飼主身分證字號
+    petnet     內嵌寵登網            12486:5516 → 12542:1030（前台→登入→二次驗證→後台→進階查詢→結果）
+    result     晶片號碼查詢結果      12544:3953
 
   ⚠️ Figma 每個 frame 都是「工作台 + Modal」；f6 是獨立路由，
      所以本檔自己畫一層靜態工作台襯底，彈窗疊在上面（同一路由、useState 切狀態）。
   ⚠️ 掃描「失敗」狀態 Figma 沒畫，但備援路徑（提示：現場若無法掃描晶片…）是設計重點，
-     這裡補了 'chipFail'：第一次掃描失敗 → 可重掃或改走身分證查詢。
-  ⚠️ 飼主資料匿名（陳O玲 / A******890），在養寵物清單全部可顯示 ——
-     依 Figma 參考頁「寵登網offline 資料欄位及建議匿名格式」(10731:3098)。
-  ⚠️ 稿面舊版殘留：案件寫台北市/0927492927（本檔一律用 state.activeCase）、
-     晶片號碼 15 碼與 16 碼混用（統一 900115000530794，與 F3 逐字稿一致）、
-     標籤寫「貓咪1」但本案是犬（改成「犬1」）。
+     這裡補了 'chipFail'：第一次掃描失敗 → 可重掃或改走飼主證件號碼查詢。
+  ⚠️ 飼主姓名在後台查詢結果是明碼「陳筱玲」（Figma 新稿 frame 12544:3953），
+     因為那是動檢員以公務帳號登入後的授權查詢；對外／摘要類畫面仍用匿名格式，見 F12。
+  ⚠️ 稿面舊版殘留：案件寫台北市/0927492927（本檔一律用 state.activeCase）。
 */
 
 /* ── 本頁缺的圖示（不動共用 icons.jsx） ── */
@@ -71,12 +68,6 @@ const MessageSquare = (p) => (
     <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
   </Svg>
 )
-const RotateCcw = (p) => (
-  <Svg {...p}>
-    <path d="M3 12a9 9 0 109-9 9 9 0 00-6.4 2.6L3 8" />
-    <path d="M3 3v5h5" />
-  </Svg>
-)
 const BookOpen = (p) => (
   <Svg {...p}>
     <path d="M12 7v14M12 7a4 4 0 00-4-4H3v14h5a4 4 0 014 4M12 7a4 4 0 014-4h5v14h-5a4 4 0 00-4 4" />
@@ -88,70 +79,25 @@ const AlertOctagon = (p) => (
     <path d="M12 8v5M12 16.5v.01" />
   </Svg>
 )
+const Globe = (p) => (
+  <Svg {...p}>
+    <circle cx="12" cy="12" r="9" />
+    <path d="M3 12h18M12 3c2.5 2.6 2.5 15 0 18M12 3c-2.5 2.6-2.5 15 0 18" />
+  </Svg>
+)
 
 const CHIP_NO = '900115000530794'
-
-/* 飼主（匿名格式）—— 與 F5 掃描結果同一人 */
-const OWNER = { name: '陳O玲', idNumber: 'A******890' }
-
-/*
-  在養寵物清單 —— 欄位依「寵登網offline 資料欄位」參考頁，全部可顯示。
-  F6 畫面只呈現其中 6 個欄位（Figma 現況），其餘一併寫進 state.petRecord 供 F13 引用。
-*/
-const PETS = [
-  {
-    chip: '900115000530794',
-    name: 'Burder',
-    gender: '公',
-    neutered: '已絕育',
-    vaccine: '未施打',
-    species: '犬 / 米克斯',
-    registeredAt: '2024/07/08',
-    station: '大利動物醫院',
-    stationPhone: '02-2960-1234',
-    injectedAt: '—',
-    motherChip: '—',
-    otherChip: '—',
-  },
-  {
-    chip: '900115000530795',
-    name: 'Mimi',
-    gender: '母',
-    neutered: '已絕育',
-    vaccine: '已施打',
-    species: '犬 / 米克斯',
-    registeredAt: '2023/03/15',
-    station: '大利動物醫院',
-    stationPhone: '02-2960-1234',
-    injectedAt: '2025/05/07',
-    motherChip: '—',
-    otherChip: '—',
-  },
-  {
-    chip: '900115000530796',
-    name: 'Lucky',
-    gender: '公',
-    neutered: '已絕育',
-    vaccine: '未施打',
-    species: '犬 / 柴犬',
-    registeredAt: '2022/11/02',
-    station: '板橋動物之家',
-    stationPhone: '02-2959-6353',
-    injectedAt: '—',
-    motherChip: '—',
-    otherChip: '—',
-  },
-]
 
 export default function F6PetQuery() {
   const { state, dispatch } = useApp()
 
-  /* choose → chipIdle → chipScanning → chipFail / chipDone → chipEdit → chipQuerying → chipResult
-     choose → idInput → idQuerying → idResult → idSelected */
+  /* choose → chipIdle → chipScanning → chipFail / chipDone → chipEdit → petnet → result
+     choose → idInput → petnet → result */
   const [view, setView] = useState('choose')
   const [chip, setChip] = useState(CHIP_NO)
+  const [scanned, setScanned] = useState(false)
   const [attempt, setAttempt] = useState(0)
-  const [picked, setPicked] = useState(0)
+  const [pet, setPet] = useState(null)
 
   /* F5 掃過就自動帶入（兩功能資料互通 —— 這是設計重點） */
   const autofilled = !!state.ownerId?.idNumber
@@ -160,37 +106,41 @@ export default function F6PetQuery() {
   /* 掃描：第一次失敗（示範備援路徑），之後成功 */
   useEffect(() => {
     if (view !== 'chipScanning') return
-    const id = setTimeout(() => setView(attempt <= 1 ? 'chipFail' : 'chipDone'), 1500)
+    const id = setTimeout(() => {
+      const ok = attempt > 1
+      setScanned(ok)
+      setView(ok ? 'chipDone' : 'chipFail')
+    }, 1500)
     return () => clearTimeout(id)
   }, [view, attempt])
-
-  useEffect(() => {
-    if (view !== 'chipQuerying' && view !== 'idQuerying') return
-    const id = setTimeout(
-      () => setView(view === 'chipQuerying' ? 'chipResult' : 'idResult'),
-      1500,
-    )
-    return () => clearTimeout(id)
-  }, [view])
-
-  /* 查到資料就寫進全域（F13 附件清單會多一筆「寵物登記查詢結果紀錄」） */
-  const savePet = (pet) => {
-    dispatch({
-      type: 'SET_PET_RECORD',
-      payload: { ...pet, owner: OWNER, queriedAt: '115/08/11 10:37', source: 'chip' },
-    })
-    dispatch({ type: 'TOGGLE_CHECK', id: 'own-2', done: true })
-  }
-
-  useEffect(() => {
-    if (view === 'chipResult') savePet(PETS[0])
-    if (view === 'idSelected') savePet(PETS[picked])
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [view])
 
   const startScan = () => {
     setAttempt((v) => v + 1)
     setView('chipScanning')
+  }
+
+  /* 寵登網按下「複製資料回外勤小助手」→ 寫進全域
+     （F13 附件清單會多一筆「寵物登記查詢結果紀錄」，F15 拾獲單的晶片欄位也會自動帶入） */
+  const copyBack = (picked) => {
+    setPet(picked)
+    dispatch({
+      type: 'SET_PET_RECORD',
+      payload: {
+        ...picked,
+        owner: OWNER,
+        queriedAt: '115/08/11 10:37',
+        source: 'petnet', // 來源：官方寵物登記管理資訊網後台
+      },
+    })
+    dispatch({ type: 'TOGGLE_CHECK', id: 'own-2', done: true })
+    setView('result')
+  }
+
+  /* 帶入寵登網查詢表單的資料：晶片號碼來自剛剛的掃描，飼主資料來自 F5 或本頁輸入 */
+  const prefill = {
+    chip: scanned ? chip : '',
+    ownerId: idNo.trim() || state.ownerId?.idNumber || '',
+    ownerName: state.ownerId?.name || '',
   }
 
   const close = () => navigate('f3')
@@ -213,24 +163,30 @@ export default function F6PetQuery() {
               />
               <OptionCard
                 Icon={CreditCard}
-                title="輸入身分證號碼"
-                desc="輸入飼主身分證字號查詢名下寵物"
+                title="輸入飼主證件號碼"
+                desc="以飼主身分證字號查詢名下寵物"
                 onClick={() => setView('idInput')}
               />
             </div>
-            <div className="mt-[39px] flex w-full items-center justify-center gap-[5px]">
-              <MessageSquare className="size-[15px] shrink-0 text-field-700" />
-              <p className="text-sm leading-5 font-medium text-field-700">
-                提示：現場若無法掃描晶片，可使用飼主身分證查詢其名下所有寵物資料
-              </p>
+            <div className="mt-[39px] flex w-full flex-col items-center gap-1.5">
+              <div className="flex items-center justify-center gap-[5px]">
+                <MessageSquare className="size-[15px] shrink-0 text-field-700" />
+                <p className="text-sm leading-5 font-medium text-field-700">
+                  提示：現場若無法掃描晶片，可使用飼主身分證查詢其名下所有寵物資料
+                </p>
+              </div>
+              <div className="flex items-center justify-center gap-[5px]">
+                <Globe className="size-[15px] shrink-0 text-neutral-500" />
+                <p className="text-sm leading-5 font-medium text-neutral-500">
+                  取得查詢條件後，會開啟官方「寵物登記管理資訊網」進行查詢
+                </p>
+              </div>
             </div>
           </Dialog>
         )}
 
-        {/* ── 晶片掃描（idle / 掃描中 / 失敗 / 完成 / 編輯 / 查詢中） ── */}
-        {['chipIdle', 'chipScanning', 'chipFail', 'chipDone', 'chipEdit', 'chipQuerying'].includes(
-          view,
-        ) && (
+        {/* ── 晶片掃描（idle / 掃描中 / 失敗 / 完成 / 編輯） ── */}
+        {['chipIdle', 'chipScanning', 'chipFail', 'chipDone', 'chipEdit'].includes(view) && (
           <Dialog title="掃描晶片號碼" onClose={close}>
             <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3">
               <ScannerArt />
@@ -300,10 +256,11 @@ export default function F6PetQuery() {
                     </button>
                   </div>
                   <button
-                    onClick={() => setView('chipQuerying')}
-                    className="rounded-md bg-field-600 px-4 py-1.5 text-sm leading-5 font-medium text-white shadow-xs"
+                    onClick={() => setView('petnet')}
+                    className="flex items-center gap-2 rounded-md bg-field-600 px-4 py-2 text-sm leading-5 font-bold text-white shadow-xs"
                   >
-                    查詢
+                    <Globe className="size-[18px]" />
+                    開啟寵登網查詢
                   </button>
                   <button
                     onClick={() => setView('choose')}
@@ -314,8 +271,6 @@ export default function F6PetQuery() {
                 </div>
               )}
 
-              {view === 'chipQuerying' && <Querying />}
-
               {['chipIdle', 'chipScanning', 'chipFail'].includes(view) && (
                 <p className="text-base leading-6 font-bold text-field-700">
                   「 請將晶片號碼放在畫面框框之中 」
@@ -325,18 +280,63 @@ export default function F6PetQuery() {
           </Dialog>
         )}
 
-        {/* ── 晶片掃描結果 ── */}
-        {view === 'chipResult' && (
-          <Dialog title="晶片掃描結果" onClose={close} badge>
-            <div className="flex min-h-0 flex-1 flex-col">
-              <div className="flex h-[336px] w-full items-center justify-center gap-9">
+        {/* ── 飼主證件號碼（手動輸入／F5 自動帶入） ── */}
+        {view === 'idInput' && (
+          <Dialog title="飼主證件號碼查詢" size="sm" onClose={close}>
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4">
+              {autofilled ? (
+                <p className="flex items-center gap-2 text-base leading-6 font-bold text-field-700">
+                  <Check className="size-5" />
+                  已自動填入飼主身分證字號（可修改）
+                </p>
+              ) : (
+                <p className="text-base leading-6 font-bold text-field-700">
+                  請輸入飼主身分證字號（10 碼）
+                </p>
+              )}
+              <input
+                value={idNo}
+                onChange={(e) => setIdNo(e.target.value)}
+                placeholder="A123456789"
+                className="h-11 w-[331px] rounded-[10px] border border-field-200 bg-white px-4 text-base leading-6 font-medium text-neutral-800 outline-none placeholder:text-neutral-400 focus:border-field-600"
+              />
+              <button
+                onClick={() => idNo.trim() && setView('petnet')}
+                disabled={!idNo.trim()}
+                className="flex items-center gap-2 rounded-md bg-field-600 px-4 py-2 text-sm leading-5 font-bold text-white shadow-xs disabled:opacity-40"
+              >
+                <Globe className="size-[18px]" />
+                開啟寵登網查詢
+              </button>
+              <button
+                onClick={() => setView('choose')}
+                className="text-sm leading-5 font-medium text-field-700 underline"
+              >
+                返回選擇查詢方式
+              </button>
+            </div>
+          </Dialog>
+        )}
+
+        {/* ── 內嵌寵物登記管理資訊網 ── */}
+        {view === 'petnet' && (
+          <Dialog title="查詢晶片號碼" size="net" onClose={close}>
+            <PetNet prefill={prefill} onCopyBack={copyBack} />
+          </Dialog>
+        )}
+
+        {/* ── 晶片號碼查詢結果（已帶回本地） ── */}
+        {view === 'result' && pet && (
+          <Dialog title="晶片號碼查詢結果" size="result" onClose={close}>
+            <div className="flex min-h-0 flex-1 flex-col gap-4">
+              <div className="flex flex-1 items-center justify-center gap-9">
                 <div className="flex h-[210px] w-[302px] flex-col items-center justify-center gap-1.5 rounded-md bg-neutral-100 px-3 py-2.5">
                   {[
-                    ['晶片號碼：', chip],
-                    ['寵物名稱：', PETS[0].name],
-                    ['性別：', PETS[0].gender],
-                    ['絕育狀態：', PETS[0].neutered],
-                    ['疫苗登記：', PETS[0].vaccine],
+                    ['晶片號碼：', pet.chip],
+                    ['寵物名稱：', pet.name],
+                    ['性別：', pet.gender],
+                    ['絕育狀態：', pet.neutered],
+                    ['疫苗登記：', pet.vaccine],
                     ['飼主名稱：', OWNER.name],
                   ].map(([k, v]) => (
                     <div key={k} className="flex w-[237px] items-start gap-2.5">
@@ -356,7 +356,7 @@ export default function F6PetQuery() {
                   ))}
                 </div>
 
-                <div className="flex w-[326px] flex-col gap-6">
+                <div className="flex w-[326px] flex-col gap-4">
                   <p className="text-xl leading-[30px] font-bold text-neutral-900">快速操作</p>
                   <button
                     onClick={() => navigate('f10')}
@@ -366,7 +366,7 @@ export default function F6PetQuery() {
                     立即拍照
                   </button>
                   <p className="text-sm leading-5 text-neutral-900">
-                    立即為 <span className="font-bold text-field-600">{PETS[0].name}</span>{' '}
+                    立即為 <span className="font-bold text-field-600">{pet.name}</span>{' '}
                     拍攝照片，照片將自動綁定到此標籤
                   </p>
                   <p className="text-sm leading-5 text-field-600">
@@ -377,124 +377,11 @@ export default function F6PetQuery() {
                 </div>
               </div>
 
-              <div className="flex w-full items-center justify-center">
+              <div className="flex w-full shrink-0 items-center justify-center">
                 <p className="text-base leading-6 font-bold text-field-700">
-                  「掃描成功，已於摘要處新增毛孩資訊」
+                  「複製成功，已於摘要處新增毛孩資訊」
                 </p>
               </div>
-            </div>
-          </Dialog>
-        )}
-
-        {/* ── 飼主身分證查詢（手動輸入／系統自動帶入／查詢中） ── */}
-        {['idInput', 'idQuerying'].includes(view) && (
-          <Dialog title="飼主身分證查詢" size="sm" onClose={close}>
-            {view === 'idInput' ? (
-              <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-4">
-                {autofilled ? (
-                  <p className="flex items-center gap-2 text-base leading-6 font-bold text-field-700">
-                    <Check className="size-5" />
-                    已自動填入飼主身分證字號（可修改）
-                  </p>
-                ) : (
-                  <p className="text-base leading-6 font-bold text-field-700">
-                    請輸入飼主身分證字號（10 碼）
-                  </p>
-                )}
-                <input
-                  value={idNo}
-                  onChange={(e) => setIdNo(e.target.value)}
-                  placeholder="A123456789"
-                  className="h-11 w-[331px] rounded-[10px] border border-field-200 bg-white px-4 text-base leading-6 font-medium text-neutral-800 outline-none placeholder:text-neutral-400 focus:border-field-600"
-                />
-                <button
-                  onClick={() => idNo.trim() && setView('idQuerying')}
-                  disabled={!idNo.trim()}
-                  className="rounded-md bg-field-600 px-4 py-1.5 text-sm leading-5 font-medium text-white shadow-xs disabled:opacity-40"
-                >
-                  查詢
-                </button>
-                <button
-                  onClick={() => setView('choose')}
-                  className="text-sm leading-5 font-medium text-field-700 underline"
-                >
-                  返回選擇查詢方式
-                </button>
-              </div>
-            ) : (
-              <div className="flex min-h-0 flex-1 items-center justify-center">
-                <Querying />
-              </div>
-            )}
-          </Dialog>
-        )}
-
-        {/* ── 查詢結果：選擇要建立標籤的寵物 ── */}
-        {['idResult', 'idSelected'].includes(view) && (
-          <Dialog title="查詢結果" onClose={close} badge>
-            <div className="flex min-h-0 flex-1 flex-col gap-3">
-              <div className="flex h-11 w-full shrink-0 items-center gap-8 rounded-md border border-hairline px-4">
-                <p className="text-sm leading-5 font-medium text-neutral-800">
-                  飼主姓名：{OWNER.name}
-                </p>
-                {/* 查詢「結果」的飼主資料一律匿名顯示，即使輸入的是明碼 */}
-                <p className="text-sm leading-5 font-medium text-neutral-800">
-                  身分證字號：{OWNER.idNumber}
-                </p>
-              </div>
-
-              <p className="shrink-0 text-sm leading-5 font-medium text-neutral-600">
-                該飼主名下共有 <span className="font-bold text-neutral-900">{PETS.length}</span>{' '}
-                隻已登記寵物，請選擇要建立標籤的寵物：
-              </p>
-
-              <div className="scroll-thin flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
-                {PETS.map((p, i) => (
-                  <button
-                    key={p.chip}
-                    onClick={() => setPicked(i)}
-                    className={`grid shrink-0 grid-cols-2 gap-x-4 gap-y-2 rounded-md border px-4 py-3 text-left ${
-                      picked === i
-                        ? 'border-field-200 bg-field-50'
-                        : 'border-transparent bg-neutral-100'
-                    }`}
-                  >
-                    <PetLine label="晶片號碼" value={p.chip} />
-                    <PetLine label="寵物名稱" value={p.name} />
-                    <PetLine label="性別" value={p.gender} />
-                    <PetLine label="絕育狀態" value={p.neutered} />
-                    <PetLine label="疫苗登記" value={p.vaccine} danger={p.vaccine === '未施打'} />
-                    <PetLine label="動物類別" value={p.species} />
-                  </button>
-                ))}
-              </div>
-
-              {view === 'idResult' ? (
-                <button
-                  onClick={() => setView('idSelected')}
-                  className="flex h-12 w-full shrink-0 items-center justify-center rounded-md bg-field-600 text-base leading-6 font-bold text-white shadow-xs"
-                >
-                  確認選擇 {PETS[picked].name}
-                </button>
-              ) : (
-                <div className="flex shrink-0 flex-col items-center gap-1.5">
-                  <div className="flex h-12 w-full items-center justify-center gap-3 rounded-md bg-field-50">
-                    <p className="text-base leading-6 font-bold text-field-700">
-                      已選擇：{PETS[picked].name}
-                    </p>
-                    <span className="rounded-full bg-white px-2.5 py-1 text-xs leading-[18px] font-medium text-neutral-600">
-                      犬1：{PETS[picked].name}
-                    </span>
-                  </div>
-                  <button
-                    onClick={close}
-                    className="flex items-center gap-2 text-sm leading-5 font-medium text-field-700"
-                  >
-                    <Check className="size-4" />
-                    查詢成功，標籤已自動建立　—　回工作台
-                  </button>
-                </div>
-              )}
             </div>
           </Dialog>
         )}
@@ -512,19 +399,26 @@ const PenBox = (p) => (
   </Svg>
 )
 
-function Dialog({ title, children, onClose, size = 'lg', badge }) {
+/* 對話框尺寸一律照 Figma frame：
+   lg 869×645（選擇／掃描）、sm 507×377（輸入證件號碼）、
+   net 1089×645（內嵌寵登網 12542:1030）、result 869×450（查詢結果 12544:3953） */
+const DIALOG_SIZE = {
+  lg: 'h-[645px] w-[869px]',
+  sm: 'h-[377px] w-[507px]',
+  net: 'h-[645px] w-[1089px]',
+  result: 'h-[450px] w-[869px]',
+}
+
+function Dialog({ title, children, onClose, size = 'lg' }) {
   return (
     <div
-      className={`relative flex flex-col gap-6 rounded-md bg-white p-6 shadow-lg ${
-        size === 'sm' ? 'h-[377px] w-[507px]' : 'h-[645px] w-[869px]'
-      }`}
+      className={`relative flex flex-col gap-6 rounded-md bg-white p-6 shadow-lg ${DIALOG_SIZE[size]}`}
     >
       <div className="flex shrink-0 items-center gap-4">
         <Search className="size-[30px] shrink-0 text-neutral-900" />
         <p className="text-xl leading-[30px] font-bold whitespace-nowrap text-neutral-900">
           {title}
         </p>
-        {badge && <AiBadge className="shrink-0">AI 比對</AiBadge>}
       </div>
       <button
         onClick={onClose}
@@ -551,15 +445,6 @@ function OptionCard({ Icon, title, desc, onClick }) {
   )
 }
 
-function PetLine({ label, value, danger }) {
-  return (
-    <p className="text-sm leading-5 font-medium text-neutral-800">
-      ・{label}：
-      <span className={danger ? 'font-bold text-danger' : ''}>{value}</span>
-    </p>
-  )
-}
-
 function Dots() {
   return (
     <div className="flex items-center gap-3">
@@ -570,18 +455,6 @@ function Dots() {
           style={{ animationDelay: `${i * 0.18}s` }}
         />
       ))}
-    </div>
-  )
-}
-
-function Querying() {
-  return (
-    <div className="flex flex-col items-center gap-1">
-      <RotateCcw className="size-8 animate-spin text-field-700" />
-      <p className="text-xl leading-[30px] font-bold text-field-700">查詢中...</p>
-      <p className="text-sm leading-5 font-medium text-field-600">
-        正在從資料庫查詢該飼主名下的寵物資料...
-      </p>
     </div>
   )
 }

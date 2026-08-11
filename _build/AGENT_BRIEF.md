@@ -124,6 +124,19 @@ cp /tmp/shots-<你的代號>/<route>.png "/sessions/serene-jolly-hawking/mnt/out
   AlertTriangle MapPin Clock Bell Search Plus Trash Edit Lock AlignLeft Sparkles X User
   MoreHorizontal GripVertical Maximize2 Map Signature Scan。先查有沒有再自己畫。
 - 選取／強調狀態一律用 `border-field-600` 或 `ring-field-600`，**不要用藍色**（藍色不在 tokens 裡）。
+- **在坤宏的 Mac 上跑 dev／build**：`node_modules` 不要裝進這個資料夾（Synology 會同步兩萬個檔案）。
+  裝到 /tmp 再做 symlink：
+  ```
+  NM=/private/tmp/dbapo-nm; mkdir -p $NM/node_modules
+  echo '{"name":"nm","private":true}' > $NM/package.json
+  ln -s $NM/node_modules "<專案路徑>/node_modules"
+  cd $NM && npm i react react-dom @fontsource/noto-sans-tc vite @vitejs/plugin-react tailwindcss @tailwindcss/vite
+  ```
+  `.claude/launch.json` 已設好 `field-assistant-dev`（port 5273），可直接用 preview_start 起。
+- **內嵌捲動容器裡的彈窗要放在捲動層外面**（`relative` 外層 + `absolute inset-0 overflow-y-auto` 內層 +
+  彈窗當外層的兄弟節點），否則一捲動彈窗就跟著跑掉。見 `components/petnet.jsx`。
+- **捲動到剛 render 出來的內容要用瞬間捲動**（`el.scrollTop = el.scrollHeight`）並延遲一個 frame，
+  `behavior:'smooth'` 會被 scroll anchoring 中斷、只捲一半。同上檔案。
 
 ## 回報格式
 
