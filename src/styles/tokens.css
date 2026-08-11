@@ -1,0 +1,141 @@
+@import 'tailwindcss';
+
+/*
+  Noto Sans TC 自架（不走 Google Fonts CDN）：
+  1) demo 現場網路不穩也不會掉字型
+  2) 與 Figma 用的字重完全一致（400 Regular / 500 Medium / 700 Bold）
+*/
+@import '@fontsource/noto-sans-tc/latin-400.css';
+@import '@fontsource/noto-sans-tc/latin-500.css';
+@import '@fontsource/noto-sans-tc/latin-700.css';
+@import '@fontsource/noto-sans-tc/chinese-traditional-400.css';
+@import '@fontsource/noto-sans-tc/chinese-traditional-500.css';
+@import '@fontsource/noto-sans-tc/chinese-traditional-700.css';
+
+/*
+  Design tokens — 直接取自 Figma「動保 Design System」(fileKey vF2gxLFZ4nTUKTERW3xDyV)
+  取得方式：get_design_context 回傳的 "These styles are contained in the design" 區塊。
+  ⚠️ 新增 token 前先回 Figma 確認命名，不要自行發明色階。
+*/
+@theme {
+  /* Brand — Field (外勤主色) */
+  --color-field-50: #eef6f5;
+  --color-field-100: #d6e9e7;
+  --color-field-200: #aed3d0;
+  --color-field-300: #7fb8b4;
+  --color-field-400: #4f9793;
+  --color-field-500: #2a807b;
+  --color-field-600: #1f706b; /* Field/600 — primary */
+  --color-field-700: #175b57; /* Field/700 — hover / link */
+  --color-field-800: #124745;
+  --color-field-900: #0e3735;
+
+  /* Neutral (Figma Neutral/xxx) */
+  --color-neutral-50: #fafafa;
+  --color-neutral-100: #f5f5f5;
+  --color-neutral-200: #e5e5e5;
+  --color-neutral-300: #d4d4d4;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #404040;
+  --color-neutral-800: #262626;
+  --color-neutral-900: #171717;
+
+  /* Text / surface (Figma Base + Gray) */
+  --color-ink: #181d27; /* 主標題 */
+  --color-ink-sub: #535862; /* 次要文字 */
+  --color-hairline: #eaecf0; /* 卡片描邊 */
+  --color-canvas: #fafafa; /* 頁面底色 */
+
+  /* AI —— Figma 用紫色專門標示「這段是 AI 產出的」，是很強的視覺語意，不要用主色代替 */
+  --color-ai-50: #faf5ff;
+  --color-ai-100: #f3e8ff;
+  --color-ai-200: #e9d5ff;
+  --color-ai-500: #a855f7;
+  --color-ai-700: #7e22ce;
+
+  /* 照片標籤分類語意色（F7 標籤圓點；來源：Figma F7 標籤 component） */
+  --color-tag-identity: #3b82f6; /* 動物身份 */
+  --color-tag-health: #ef4444; /* 健康狀況 */
+  --color-tag-env: #eab308; /* 環境 */
+  --color-tag-care: #22c55e; /* 照護狀態 */
+
+  /* Status */
+  --color-danger: #d92d20;
+  --color-danger-bg: #fef3f2;
+  --color-warning: #dc6803;
+  --color-warning-bg: #fffaeb;
+  --color-success: #079455;
+  --color-success-bg: #ecfdf3;
+  --color-info: #175cd3;
+  --color-info-bg: #eff8ff;
+
+  /* Type */
+  --font-sans: 'Noto Sans TC', -apple-system, BlinkMacSystemFont, 'PingFang TC',
+    'Microsoft JhengHei', sans-serif;
+
+  /* Radius */
+  --radius-xs: 4px;
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* Shadow (Figma Effect styles) */
+  --shadow-xs: 0px 1px 2px 0px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0px 1px 3px 0px rgba(16, 24, 40, 0.1), 0px 1px 2px 0px rgba(16, 24, 40, 0.06);
+  --shadow-md: 0px 4px 8px -2px rgba(16, 24, 40, 0.1), 0px 2px 4px -2px rgba(16, 24, 40, 0.06);
+  --shadow-lg: 0px 8px 24px 0px rgba(15, 23, 41, 0.08);
+  --shadow-xl: 0px 20px 24px -4px rgba(16, 24, 40, 0.08), 0px 8px 8px -4px rgba(16, 24, 40, 0.03);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  background: var(--color-canvas);
+  /* iPad Safari: 禁止整頁橡皮筋捲動與雙擊放大 */
+  overscroll-behavior: none;
+  -webkit-text-size-adjust: 100%;
+  touch-action: manipulation;
+}
+
+/* 原型不需要文字選取造成的誤觸；表單元素除外 */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+input,
+textarea,
+[contenteditable='true'] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+button {
+  font-family: inherit;
+}
+
+/* 捲軸：iPad 上不佔位，桌機上細一點，避免版型與 Figma 差一條捲軸寬 */
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-neutral-300) transparent;
+}
+.scroll-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: var(--color-neutral-300);
+  border-radius: 999px;
+}
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}

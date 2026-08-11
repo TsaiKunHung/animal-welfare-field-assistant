@@ -1,0 +1,23 @@
+{
+  "name": "field-assistant-v3",
+  "private": true,
+  "version": "3.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 4173",
+    "shot": "node _build/shot.mjs"
+  },
+  "dependencies": {
+    "@fontsource/noto-sans-tc": "^5.2.11",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.2.0"
+  }
+}
