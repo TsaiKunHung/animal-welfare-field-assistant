@@ -3,14 +3,17 @@ import { navigate } from '../router.jsx'
 import { useApp } from '../store/AppState.jsx'
 import { AiBadge, Button } from '../components/ui.jsx'
 import {
-  ChevronLeft,
-  Cloud,
   AlignLeft,
-  Edit,
+  ChevronLeft,
+  Clipboard,
   Clock,
+  Cloud,
+  Edit,
   FileText,
-  Lock,
   Flag,
+  Lock,
+  MessageCircle,
+  Star,
 } from '../components/icons.jsx'
 
 /*
@@ -31,40 +34,6 @@ import {
     依 AGENT_BRIEF「不要寫死 hex／不要發明色階」，改以 <AiBadge> 標示 AI 來源，內文用 neutral。
 */
 
-/* ── 本頁缺的圖示（icons.jsx 沒有 star / message-circle / clipboard；避免多 subagent 同時改共用檔） ── */
-function Svg({ children, className = 'size-6', ...rest }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      {...rest}
-    >
-      {children}
-    </svg>
-  )
-}
-const Star = (p) => (
-  <Svg {...p}>
-    <path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1-5.4-2.9-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z" />
-  </Svg>
-)
-const MessageCircle = (p) => (
-  <Svg {...p}>
-    <path d="M21 11.5a8.4 8.4 0 01-9 8.5 9 9 0 01-3.9-.9L3 20.5l1.4-4.1A8.4 8.4 0 013.5 12a8.4 8.4 0 018.5-8.5 8.4 8.4 0 019 8z" />
-  </Svg>
-)
-const Clipboard = (p) => (
-  <Svg {...p}>
-    <rect x="8" y="2" width="8" height="4" rx="1" />
-    <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" />
-    <path d="M9 12h6M9 16h4" />
-  </Svg>
-)
 
 /* ── 左側工具列（Figma「Field tool rail」，AI摘要為目前頁） ── */
 const TOOLS = [

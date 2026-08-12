@@ -1,23 +1,33 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { navigate } from '../router.jsx'
 import { useApp } from '../store/AppState.jsx'
-import { AiBadge, Modal, Textarea } from '../components/ui.jsx'
+import { AiBadge, Modal, PhotoArt, Textarea } from '../components/ui.jsx'
+import { CARE_GUIDE_URL, careGuideFor, recordFormFor } from '../store/evidence.js'
 import {
+  BarChart2,
+  BookOpen,
+  Bookmark,
   Camera,
   Check,
   ChevronDown,
   ChevronLeft,
+  Clipboard,
   Cloud,
   CloudOff,
   Edit,
   FileText,
-  Images,
+  Image,
+  MessageCircle,
   Mic,
   Pause,
   Play,
-  Plus,
   Search,
-  Square,
+  ExternalLink,
+  Printer,
+  Sparkles,
+  Star,
+  ThumbsUp,
+  StopCircle,
   User,
   X,
 } from '../components/icons.jsx'
@@ -38,70 +48,15 @@ import {
      這裡一律改成全域 state.activeCase（AC-1150811-003 文化路米克斯犬／新北市板橋區）。
 */
 
-/* ── 本頁缺的圖示（icons.jsx 沒有；避免多個 subagent 同時改共用檔） ── */
-function Svg({ children, className = 'size-6', ...rest }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      {...rest}
-    >
-      {children}
-    </svg>
-  )
-}
-const BookOpen = (p) => (
-  <Svg {...p}>
-    <path d="M12 7v14M12 7a4 4 0 00-4-4H3v14h5a4 4 0 014 4M12 7a4 4 0 014-4h5v14h-5a4 4 0 00-4 4" />
-  </Svg>
-)
-const Bookmark = (p) => (
-  <Svg {...p}>
-    <path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" />
-  </Svg>
-)
-const ThumbsUp = (p) => (
-  <Svg {...p}>
-    <path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3M7 11l4-9a3 3 0 013 3v4h5.5a2 2 0 011.96 2.4l-1.4 7A2 2 0 0118.1 21H7z" />
-  </Svg>
-)
-const ExternalLink = (p) => (
-  <Svg {...p}>
-    <path d="M15 3h6v6M10 14L21 3M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6" />
-  </Svg>
-)
-const Star = (p) => (
-  <Svg {...p}>
-    <path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8 6.2 20.9l1.1-6.5L2.6 9.8l6.5-.9L12 3z" />
-  </Svg>
-)
-const MessageCircle = (p) => (
-  <Svg {...p}>
-    <path d="M21 11.5a8.4 8.4 0 01-9 8.5 8.6 8.6 0 01-3.9-.9L3 21l1.9-5.1A8.4 8.4 0 013.5 11 8.4 8.4 0 0112 3a8.4 8.4 0 019 8.5z" />
-  </Svg>
-)
-const BarChart = (p) => (
-  <Svg {...p}>
-    <path d="M6 20V10M12 20V4M18 20v-6" />
-  </Svg>
-)
-const Clipboard = (p) => (
-  <Svg {...p}>
-    <rect x="8" y="2" width="8" height="4" rx="1" />
-    <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" />
-  </Svg>
-)
+/* 本頁的圖示全部來自共用 icons.jsx（Feather），不再自繪。
+   Figma 對照：工具列 user/search/image/file-text/book-open、
+   蒐證清單 action camera/image/edit、標記重點 bookmark、結束錄音 stop-circle。 */
 
 /* ── 左側工具列：Figma 稿面是「五個」工具（第五個是筆記本，開本頁彈窗） ── */
 const TOOLS = [
   { key: 'f5', label: '飼主身分查詢', Icon: User },
   { key: 'f6', label: '寵物晶片查詢', Icon: Search },
-  { key: 'f7', label: '瀏覽案件照片', Icon: Images },
+  { key: 'f7', label: '瀏覽案件照片', Icon: Image },
   { key: 'f9', label: '案件內容', Icon: FileText },
   { key: 'notebook', label: '筆記本', Icon: BookOpen },
 ]
@@ -161,8 +116,18 @@ const SEED_NOTES = [
   '排泄物堆積、通風不良，異味明顯',
 ]
 
-/* 波形柱高（Figma Field recording bar / Waveform） */
-const WAVE = [10, 18, 28, 16, 34, 22, 12, 30, 20, 36, 16, 26, 12, 32, 18, 24, 14, 28, 10, 20, 34, 16, 22, 12]
+/* 波形柱（Figma Field recording bar / Waveform 是 24 根、寬 4、間距 4）
+   每根柱子預先算好自己的最大高度、週期與相位；動畫本身交給 CSS（見 tokens.css），
+   不用 JS 每秒重算，才不會整排同時跳。 */
+const WAVE = [10, 18, 28, 16, 34, 22, 12, 30, 20, 36, 16, 26, 12, 32, 18, 24, 14, 28, 10, 20, 34, 16, 22, 12].map(
+  (h, i) => ({
+    h: Math.max(14, h),
+    // 0.62–1.18s：長短交錯，避免所有柱子週期一致而產生整齊的節拍
+    dur: 0.62 + ((i * 7) % 9) * 0.07,
+    // 相位錯開一整個週期，看起來像聲音從左往右掃過去
+    delay: -(((i * 5) % 11) * 0.11),
+  }),
+)
 
 const pad = (n) => String(n).padStart(2, '0')
 const fmt = (s) => `${pad(Math.floor(s / 3600))}:${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`
@@ -179,34 +144,34 @@ export default function F3Workbench() {
   const status = state.recording.status === 'done' ? 'idle' : state.recording.status
   const setStatus = (s) => dispatch({ type: 'SET_RECORDING', payload: { status: s } })
   const [elapsed, setElapsed] = useState(0)
-  const [tick, setTick] = useState(0)
 
-  /* 逐字稿播放進度 */
-  const [cursor, setCursor] = useState(0)
+  /* 逐字稿播放進度 —— 從已經播過的句數接下去，離開 F3 去拍照再回來不會從頭重播 */
+  const [cursor, setCursor] = useState(() => state.transcript.length)
   const scrollRef = useRef(null)
 
   /* 分頁 / 面板 / 彈窗 */
   const [tab, setTab] = useState('raw') // raw | ai
   const [notebookOpen, setNotebookOpen] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const [detect, setDetect] = useState(null) // F11 彈窗 payload
+  /* 目前就地展開的蒐證項目 id（拍完照後看照片用） */
+  const [openItem, setOpenItem] = useState(null)
+  /* 目前開著文字紀錄彈窗的蒐證項目 */
+  const [recordFor, setRecordFor] = useState(null)
   const [collapsed, setCollapsed] = useState({})
-  const [adding, setAdding] = useState(false)
-  const [newItem, setNewItem] = useState('')
 
-  /* ── 計時器：錄音中每秒 +1，同時讓波形跳動 ── */
+  /* ── 計時器：錄音中每秒 +1（波形動畫由 CSS 跑，不吃這個 tick） ── */
   useEffect(() => {
     if (status !== 'recording') return
-    const id = setInterval(() => {
-      setElapsed((v) => v + 1)
-      setTick((v) => v + 1)
-    }, 1000)
+    const id = setInterval(() => setElapsed((v) => v + 1), 1000)
     return () => clearInterval(id)
   }, [status])
 
-  /* ── 逐字稿自動長出來：每 2.4 秒一句；跳出 F11 彈窗時暫停，關掉後續播 ── */
+  /* ── 逐字稿自動長出來：每 2.4 秒一句 ──
+     ⚠️ 2026-08-11 改：AI 檢核到內容時**不再打斷動檢員跳彈窗**。
+        命中只記進 aiHits，讓對應的蒐證項目長出「AI 已帶入」徽章；
+        動檢員點開那一項時才會看到 AI 帶了什麼進來。 */
   useEffect(() => {
-    if (status !== 'recording' || detect || cursor >= SCRIPT.length) return
+    if (status !== 'recording' || cursor >= SCRIPT.length) return
     const id = setTimeout(() => {
       const line = SCRIPT[cursor]
       dispatch({
@@ -214,10 +179,10 @@ export default function F3Workbench() {
         payload: { t: line.t, speaker: line.speaker, text: line.text, marked: false },
       })
       setCursor((v) => v + 1)
-      if (line.trigger) setDetect({ checkId: line.trigger, line })
+      if (line.trigger) dispatch({ type: 'ADD_AI_HIT', id: line.trigger, payload: line })
     }, 2400)
     return () => clearTimeout(id)
-  }, [status, detect, cursor, dispatch])
+  }, [status, cursor, dispatch])
 
   /* 新句子出現就捲到底 */
   useEffect(() => {
@@ -268,19 +233,10 @@ export default function F3Workbench() {
   }
   const onTool = (key) => (key === 'notebook' ? openNotebook() : navigate(key))
   const finish = () => (checklistComplete ? navigate('f12') : setConfirmOpen(true))
-  const saveDetect = () => {
-    if (detect) dispatch({ type: 'TOGGLE_CHECK', id: detect.checkId, done: true })
-    setDetect(null)
-  }
-  const addItem = () => {
-    const label = newItem.trim()
-    if (!label) return setAdding(false)
-    dispatch({
-      type: 'ADD_CHECK_ITEM',
-      payload: { id: `tmp-${Date.now()}`, group: '現場臨時項目', label, done: false, photos: [] },
-    })
-    setNewItem('')
-    setAdding(false)
+  /* 拍照類項目：把要拍的對象記到全域，F10 才知道現在在拍哪一項的哪些角度 */
+  const openCamera = (item) => {
+    dispatch({ type: 'SET_CAMERA_TARGET', id: item.id })
+    navigate('f10')
   }
 
   return (
@@ -444,44 +400,16 @@ export default function F3Workbench() {
 
         {/* 蒐證清單 Evidence checklist */}
         <section className="flex h-full min-w-0 flex-1 flex-col overflow-hidden rounded-md bg-white">
-          <div className="flex h-[88px] shrink-0 items-center justify-between px-5 py-3.5">
-            <div className="flex flex-col gap-1">
-              <h2 className="text-xl leading-[30px] font-bold text-neutral-900">
-                「{c.type}」蒐證清單
-              </h2>
-              <p className="text-xs leading-[18px] font-medium text-neutral-500">
-                已完成 {checklistDone}／{checklistTotal}｜現場可新增臨時項目
-              </p>
-            </div>
-            <button
-              onClick={() => setAdding(true)}
-              className="flex h-9 items-center gap-1.5 rounded-md border border-neutral-300 bg-white px-3 text-sm leading-5 font-bold text-field-700 shadow-xs"
-            >
-              <Plus className="size-4" />
-              新增臨時項目
-            </button>
+          <div className="flex h-[88px] shrink-0 flex-col justify-center gap-1 px-5 py-3.5">
+            <h2 className="text-xl leading-[30px] font-bold text-neutral-900">
+              「{c.type}」蒐證清單
+            </h2>
+            <p className="text-xs leading-[18px] font-medium text-neutral-500">
+              已完成 {checklistDone}／{checklistTotal}
+            </p>
           </div>
 
           <div className="scroll-thin flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto px-4 pt-1 pb-6">
-            {adding && (
-              <div className="flex shrink-0 items-center gap-2 rounded-md border border-field-600 bg-white px-3.5 py-3">
-                <input
-                  autoFocus
-                  value={newItem}
-                  onChange={(e) => setNewItem(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && addItem()}
-                  placeholder="輸入臨時蒐證項目後按 Enter"
-                  className="flex-1 text-sm leading-5 outline-none placeholder:text-neutral-400"
-                />
-                <button onClick={addItem} className="text-sm leading-5 font-bold text-field-700">
-                  新增
-                </button>
-                <button onClick={() => setAdding(false)} className="text-neutral-400">
-                  <X className="size-4" />
-                </button>
-              </div>
-            )}
-
             {groups.map((g) => {
               const done = g.items.filter((i) => i.done).length
               const open = !collapsed[g.name]
@@ -503,18 +431,30 @@ export default function F3Workbench() {
                   </button>
 
                   {open &&
-                    g.items.map((item) => (
-                      <EvidenceRow
-                        key={item.id}
-                        item={item}
-                        onToggle={() => dispatch({ type: 'TOGGLE_CHECK', id: item.id })}
-                        onAction={() =>
-                          isPhotoItem(item.label)
-                            ? navigate('f10')
-                            : setDetect({ checkId: item.id, line: lastMatch(state.transcript, item.id) })
-                        }
-                      />
-                    ))}
+                    g.items.map((item) => {
+                      const photo = isPhotoItem(item.label)
+                      const photos = state.photos.filter((p) => p.checklistId === item.id)
+                      return (
+                        <EvidenceRow
+                          key={item.id}
+                          item={item}
+                          photos={photos}
+                          /* AI 明確檢核到的那一句；有值且還沒完成 → 整列變紫色 */
+                          aiLine={state.aiHits[item.id]}
+                          reviewed={!!state.records[item.id]}
+                          expanded={openItem === item.id}
+                          onToggle={() => dispatch({ type: 'TOGGLE_CHECK', id: item.id })}
+                          /* 拍照類：未完成去拍照、已完成就地展開看剛剛拍的照片
+                             文字類：一律開文字紀錄彈窗 */
+                          onAction={() => {
+                            if (!photo) return setRecordFor(item)
+                            if (item.done && photos.length > 0)
+                              return setOpenItem(openItem === item.id ? null : item.id)
+                            openCamera(item)
+                          }}
+                        />
+                      )
+                    })}
                 </div>
               )
             })}
@@ -542,17 +482,7 @@ export default function F3Workbench() {
           <span className="text-sm leading-5 font-bold text-neutral-900">{fmt(elapsed)}</span>
         </div>
 
-        <div className="flex h-10 min-w-0 flex-1 items-center justify-center gap-1">
-          {WAVE.map((h, i) => (
-            <span
-              key={i}
-              className={`w-1 rounded-[2px] transition-all duration-300 ${
-                status === 'recording' ? 'bg-field-400' : 'bg-neutral-300'
-              }`}
-              style={{ height: status === 'recording' ? WAVE[(i + tick) % WAVE.length] : Math.max(6, h / 3) }}
-            />
-          ))}
-        </div>
+        <Waveform status={status} />
 
         <div className="flex items-center gap-2">
           {status === 'idle' ? (
@@ -583,7 +513,7 @@ export default function F3Workbench() {
                 onClick={stop}
                 className="flex h-12 w-[124px] items-center justify-center gap-2 rounded-md border border-danger bg-danger text-sm leading-5 font-bold text-white"
               >
-                <Square className="size-[22px]" />
+                <StopCircle className="size-[22px]" />
                 結束錄音
               </button>
             </>
@@ -591,12 +521,22 @@ export default function F3Workbench() {
         </div>
       </footer>
 
-      {/* ── F11 文字摘要與檢測確認彈窗 ── */}
-      <DetectModal
-        detect={detect}
-        checklist={state.checklist}
-        onClose={() => setDetect(null)}
-        onSave={saveDetect}
+      {/* ── F11 文字紀錄與檢核彈窗 ── */}
+      <RecordModal
+        item={recordFor}
+        aiLine={recordFor ? state.aiHits[recordFor.id] : null}
+        relatedLine={
+          recordFor && !state.aiHits[recordFor.id]
+            ? lastMatch(state.transcript, recordFor.id)
+            : null
+        }
+        saved={recordFor ? state.records[recordFor.id] : null}
+        onClose={() => setRecordFor(null)}
+        onSave={(payload) => {
+          dispatch({ type: 'SET_RECORD', id: recordFor.id, payload })
+          dispatch({ type: 'TOGGLE_CHECK', id: recordFor.id, done: true })
+          setRecordFor(null)
+        }}
       />
 
       {/* ── F8 筆記本（Figma 是置中卡片，不是側邊面板） ── */}
@@ -657,55 +597,155 @@ function lastMatch(transcript, checkId) {
   return transcript[transcript.length - 1] ?? null
 }
 
-/* ── 蒐證清單單列 Evidence row ── */
-function EvidenceRow({ item, onToggle, onAction }) {
+/* ── 錄音波形 ──
+   錄音中：CSS 逐柱呼吸（週期／相位都不同）。暫停：凍在當下。未錄音：一排低平灰柱。 */
+function Waveform({ status }) {
+  const on = status === 'recording'
+  const paused = status === 'paused'
+  return (
+    <div
+      className={`flex h-10 min-w-0 flex-1 items-center justify-center gap-1 ${
+        on || paused ? 'wave-on' : ''
+      } ${paused ? 'wave-paused' : ''}`}
+      aria-hidden="true"
+    >
+      {WAVE.map((b, i) => (
+        <span
+          key={i}
+          className={`wave-bar w-1 rounded-[2px] ${
+            on ? 'bg-field-400' : paused ? 'bg-field-200' : 'bg-neutral-300'
+          }`}
+          style={{
+            height: b.h,
+            animationDuration: `${b.dur}s`,
+            animationDelay: `${b.delay}s`,
+            /* 未錄音時所有柱子縮成同高的一條平線（6px）——
+               柱子原始高度不一，若直接用同一個縮放比例，靜止狀態會高低不齊，
+               看起來像波形位置跑掉。錄音時才交給 CSS 動畫。 */
+            ...(on || paused ? null : { transform: `scaleY(${6 / b.h})` }),
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+/* ── 蒐證清單單列 Evidence row ──
+   ⚠️ AI 從逐字稿檢核到內容時不主動彈窗（會打斷現場對話）。
+      改成整列變成紫色框 —— 「這一項 AI 已經先寫好了，等你審核」。
+      動檢員按右側圖示打開文字紀錄彈窗覆核後，紫色就消失。 */
+function EvidenceRow({ item, photos = [], aiLine, reviewed, expanded, onToggle, onAction }) {
   const photo = isPhotoItem(item.label)
-  const ActionIcon = item.done ? Images : photo ? Camera : Edit
+  /* 圖示：待拍照→相機、已有照片→圖片、文字紀錄一律鉛筆（不會因為完成就變圖片） */
+  const ActionIcon = photo ? (item.done && photos.length > 0 ? Image : Camera) : Edit
+  const aiPending = !!aiLine && !item.done && !reviewed
   const sub = item.done
     ? photo
-      ? `已完成｜${item.photos.length || 1} 張照片`
+      ? `已完成｜${photos.length || item.photos.length || 1} 張照片`
       : '已完成｜內容已記錄'
-    : photo
-      ? '需要照片'
-      : '需要文字紀錄'
+    : aiPending
+      ? 'AI 已依現場錄音填好，待您審核'
+      : photo
+        ? '需要照片'
+        : '需要文字紀錄'
 
   return (
     <div
-      className={`flex h-[82px] shrink-0 items-center gap-3 rounded-md border px-3.5 py-3 ${
-        item.done ? 'border-field-200 bg-field-50' : 'border-neutral-200 bg-white'
+      className={`flex shrink-0 flex-col rounded-md border ${
+        aiPending
+          ? 'border-ai-200 bg-ai-50'
+          : item.done
+            ? 'border-field-200 bg-field-50'
+            : 'border-neutral-200 bg-white'
       }`}
     >
-      <button
-        onClick={onToggle}
-        className="flex size-10 shrink-0 items-center justify-center rounded-md"
-        role="checkbox"
-        aria-checked={item.done}
-      >
-        <span
-          className={`flex size-5 items-center justify-center rounded-sm border ${
-            item.done ? 'border-field-600 bg-field-50' : 'border-neutral-300 bg-white'
-          }`}
-        >
-          {item.done && <Check className="size-3.5 text-field-600" />}
-        </span>
-      </button>
-      <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <p className="truncate text-sm leading-5 font-bold text-neutral-900">{item.label}</p>
-        <p
-          className={`text-xs leading-[18px] font-medium ${
-            item.done ? 'text-field-700' : 'text-neutral-600'
-          }`}
-        >
-          {sub}
-        </p>
-      </div>
-      <button
+      {/* 平板單手操作：整條都是點擊區，不要逼使用者瞄準右邊那顆小圖示。
+          只有左邊的勾選框自己攔截點擊（打勾 ≠ 打開內容）。 */}
+      <div
         onClick={onAction}
-        className="flex size-10 shrink-0 items-center justify-center rounded-md bg-white"
-        aria-label={photo ? '拍照' : '編輯文字紀錄'}
+        role="button"
+        tabIndex={0}
+        className="flex h-[82px] shrink-0 cursor-pointer items-center gap-3 px-3.5 py-3"
       >
-        <ActionIcon className="size-5 text-neutral-700" />
-      </button>
+        <button
+          onClick={(e) => {
+            e.stopPropagation()
+            onToggle()
+          }}
+          className="flex size-11 shrink-0 items-center justify-center rounded-md"
+          role="checkbox"
+          aria-checked={item.done}
+        >
+          <span
+            className={`flex size-5 items-center justify-center rounded-sm border ${
+              item.done ? 'border-field-600 bg-field-50' : 'border-neutral-300 bg-white'
+            }`}
+          >
+            {item.done && <Check className="size-3.5 text-field-600" />}
+          </span>
+        </button>
+
+        <span className="flex min-w-0 flex-1 flex-col items-start gap-1 text-left">
+          <span className="truncate text-sm leading-5 font-bold text-neutral-900">{item.label}</span>
+          <span className="flex items-center gap-1.5">
+            {aiPending && <Sparkles className="size-3.5 shrink-0 text-ai-700" />}
+            <span
+              className={`text-xs leading-[18px] font-medium ${
+                aiPending ? 'text-ai-700' : item.done ? 'text-field-700' : 'text-neutral-600'
+              }`}
+            >
+              {sub}
+            </span>
+            {photo && item.done && photos.length > 0 && (
+              <ChevronDown
+                className={`size-3.5 text-neutral-400 transition-transform ${expanded ? 'rotate-180' : ''}`}
+              />
+            )}
+          </span>
+        </span>
+
+        {/* 純視覺提示：整條都能點，這顆只是告訴你點下去會發生什麼 */}
+        <span
+          className={`flex size-10 shrink-0 items-center justify-center rounded-md bg-white ${
+            aiPending ? 'text-ai-700' : 'text-neutral-700'
+          }`}
+          aria-hidden="true"
+        >
+          <ActionIcon className="size-5" />
+        </span>
+      </div>
+
+      {/* 拍完照後點圖片鈕：就地展開這一項拍到的照片 */}
+      {expanded && photo && photos.length > 0 && (
+        <div className="flex flex-col gap-2 border-t border-field-200 px-3.5 py-3">
+          <p className="text-xs leading-[18px] font-medium text-neutral-500">
+            本項已拍攝 {photos.length} 張
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {photos.map((p, i) => (
+              <div key={p.id} className="flex w-[92px] flex-col gap-1">
+                <div className="relative aspect-[4/3] w-full overflow-hidden rounded-sm">
+                  <PhotoArt seed={i} className="size-full" />
+                  {p.tags?.some((t) => t.x != null) && (
+                    <span className="absolute right-1 bottom-1 rounded-full bg-black/55 px-1.5 text-xs leading-[18px] font-medium text-white">
+                      {p.tags.filter((t) => t.x != null).length} 標記
+                    </span>
+                  )}
+                </div>
+                <p className="truncate text-xs leading-[18px] font-medium text-neutral-600">
+                  {p.label}
+                </p>
+              </div>
+            ))}
+          </div>
+          <button
+            onClick={() => navigate('f7')}
+            className="self-start text-xs leading-[18px] font-bold text-field-700 underline"
+          >
+            到照片頁做更多標記
+          </button>
+        </div>
+      )}
     </div>
   )
 }
@@ -771,7 +811,7 @@ function AiSummaryPane({ summary, setSummary, hasTranscript }) {
         </span>
       </div>
 
-      <SummaryHead Icon={BarChart} title="查驗與蒐證結果" />
+      <SummaryHead Icon={BarChart2} title="查驗與蒐證結果" />
       <div className="flex shrink-0 flex-col gap-0.5 rounded-md border border-neutral-200 bg-white px-3 py-2.5 shadow-xs">
         {[
           ['現場動物數量：', '犬隻 1 隻'],
@@ -798,78 +838,6 @@ function AiSummaryPane({ summary, setSummary, hasTranscript }) {
         </span>
       </div>
     </div>
-  )
-}
-
-/* ── F11 文字摘要與檢測確認彈窗 ── */
-function DetectModal({ detect, checklist, onClose, onSave }) {
-  if (!detect) return null
-  const item = checklist.find((i) => i.id === detect.checkId)
-  const words = KEYWORDS[detect.checkId] ?? []
-  const line = detect.line
-
-  return (
-    <Modal open onClose={onClose} width={1130}>
-      <div className="flex flex-col gap-4 p-6">
-        <div className="flex items-start gap-4">
-          <Edit className="size-[30px] shrink-0 text-neutral-700" />
-          <p className="flex-1 text-xl leading-[30px] font-bold text-neutral-900">
-            {item?.label ?? '文字摘要與檢測確認'}
-          </p>
-          <button onClick={onClose} className="text-neutral-500" aria-label="關閉">
-            <X className="size-6" />
-          </button>
-        </div>
-
-        <div className="flex items-stretch gap-4">
-          {/* 左欄：已錄音資訊 */}
-          <div className="flex min-w-0 flex-1 flex-col gap-2.5 rounded-md bg-neutral-100 px-3 py-4">
-            <p className="text-base leading-6 font-bold text-field-600">已錄音資訊</p>
-            <div className="flex flex-1 items-start rounded-md border border-neutral-200 bg-white px-3 py-2.5">
-              <p className="text-sm leading-5 text-neutral-900">
-                {line ? `[${line.t}] ${line.text}` : '本項目尚未偵測到對應逐字稿，可直接手動確認。'}
-              </p>
-            </div>
-          </div>
-
-          {/* 右欄：內容檢測成功 ＋ 建議處置方式 */}
-          <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
-            <div className="flex items-center gap-4 rounded-md bg-neutral-100 py-4 pr-3 pl-6">
-              <Check className="size-9 shrink-0 text-field-600" />
-              <div className="flex min-w-0 flex-1 flex-col gap-[5px]">
-                <p className="text-base leading-6 font-bold text-field-600">內容檢測成功</p>
-                <p className="text-sm leading-5 font-medium text-neutral-700">
-                  已偵測到逐字稿中「{item?.group ?? '現場紀錄'}」相關資料，請核對。
-                </p>
-                <p className="text-xs leading-[18px] text-neutral-600">
-                  檢測關鍵詞：{words.join('、')}
-                </p>
-              </div>
-            </div>
-            <button className="flex items-center gap-4 rounded-md bg-field-50 py-3 pr-3 pl-6 text-left">
-              <ThumbsUp className="size-[30px] shrink-0 text-field-600" />
-              <span className="flex-1 text-base leading-6 font-bold text-field-600">建議處置方式</span>
-              <ExternalLink className="size-4 shrink-0 text-field-600" />
-            </button>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-end gap-3">
-          <button
-            onClick={onClose}
-            className="rounded-md bg-neutral-200 px-3.5 py-2 text-sm leading-5 font-bold text-neutral-600 shadow-xs"
-          >
-            取消
-          </button>
-          <button
-            onClick={onSave}
-            className="rounded-md border border-field-600 bg-field-600 px-3.5 py-2 text-sm leading-5 font-bold text-white shadow-xs"
-          >
-            保存
-          </button>
-        </div>
-      </div>
-    </Modal>
   )
 }
 
@@ -948,5 +916,450 @@ function NotebookModal({ open, notes, onClose, onAdd, onRemove }) {
         </button>
       </div>
     </Modal>
+  )
+}
+
+/* ═══════════ F11 文字紀錄與檢核彈窗 ═══════════
+   Figma F11「文字摘要與檢測確認」(11088:1292) 的兩欄版型：左邊作答、右邊已錄音資訊。
+
+   ★ 左欄從「一個大文字框」改成模組化題目（單選／複選／數字／填空）——
+     現場戴著手套、單手拿平板，打字是最貴的動作，能點就不要打。
+   ★ AI 聽到逐字稿對應內容時會先把答案填好，**顯示成紫色**；
+     動檢員改動或按確認後轉成黑色。保存＝完成審核，所有紫色一併轉黑。
+     這是整個系統的核心邏輯：AI 先寫，動檢員做最後審核。 */
+function RecordModal({ item, aiLine, relatedLine, saved, onClose, onSave }) {
+  const [form, setForm] = useState({ values: {}, ai: {} })
+  const [guideOpen, setGuideOpen] = useState(false)
+
+  /* 開啟時決定初值：已存過就沿用；沒存過但 AI 有聽到 → 用 AI 的答案並標成紫色 */
+  useEffect(() => {
+    if (!item) return
+    if (saved) return setForm(saved)
+    const schema = recordFormFor(item.id)
+    const prefill = aiLine ? schema.ai : {}
+    setForm({
+      values: { ...prefill },
+      ai: Object.fromEntries(Object.keys(prefill).map((k) => [k, true])),
+    })
+  }, [item, saved, aiLine])
+
+  if (!item) return null
+
+  const schema = recordFormFor(item.id)
+  const words = KEYWORDS[item.id] ?? []
+  const pendingKeys = Object.keys(form.ai).filter((k) => form.ai[k])
+  const line = aiLine ?? relatedLine
+
+  /* 任何一次動到欄位，就代表動檢員看過了 → 這格轉黑 */
+  const setValue = (key, value) =>
+    setForm((f) => ({ ...f, values: { ...f.values, [key]: value }, ai: { ...f.ai, [key]: false } }))
+  const confirmAll = () => setForm((f) => ({ ...f, ai: {} }))
+
+  const answered = schema.fields.filter((f) => {
+    const v = form.values[f.key]
+    return Array.isArray(v) ? v.length > 0 : v !== undefined && v !== ''
+  }).length
+
+  return (
+    <Modal open onClose={onClose} width={1060}>
+      <div className="flex flex-col gap-4 p-6">
+        <div className="flex items-start gap-4">
+          <Edit className="mt-0.5 size-[30px] shrink-0 text-neutral-700" />
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <p className="text-xl leading-[30px] font-bold text-neutral-900">{item.label}</p>
+            <p className="text-xs leading-[18px] font-medium text-neutral-500">
+              {item.group}｜已填 {answered}／{schema.fields.length} 題
+            </p>
+          </div>
+          {pendingKeys.length > 0 && <AiBadge>AI 已帶入 {pendingKeys.length} 題</AiBadge>}
+          <button onClick={onClose} className="text-neutral-500" aria-label="關閉">
+            <X className="size-6" />
+          </button>
+        </div>
+
+        {/* AI 帶入時的審核提示列 */}
+        {pendingKeys.length > 0 && (
+          <div className="flex items-center gap-3 rounded-md border border-ai-200 bg-ai-50 px-4 py-2.5">
+            <Sparkles className="size-5 shrink-0 text-ai-700" />
+            <p className="min-w-0 flex-1 text-sm leading-5 font-medium text-ai-700">
+              紫色欄位是 AI 依現場錄音自動帶入的，請確認內容正確後再保存。
+            </p>
+            <button
+              onClick={confirmAll}
+              className="flex h-9 shrink-0 items-center gap-1.5 rounded-md bg-ai-700 px-3.5 text-sm leading-5 font-bold text-white"
+            >
+              <Check className="size-4" />
+              全部確認無誤
+            </button>
+          </div>
+        )}
+
+        <div className="flex items-stretch gap-4">
+          {/* ── 左欄：模組化作答 ── */}
+          <div className="scroll-thin flex max-h-[420px] min-w-0 flex-1 flex-col gap-4 overflow-y-auto pr-1">
+            {schema.fields.map((f) => (
+              <RecordField
+                key={f.key}
+                field={f}
+                value={form.values[f.key]}
+                ai={!!form.ai[f.key]}
+                onChange={(v) => setValue(f.key, v)}
+              />
+            ))}
+          </div>
+
+          {/* ── 右欄：已錄音資訊（Figma F11 右欄） ── */}
+          <div className="flex w-[360px] shrink-0 flex-col gap-2.5">
+            <div className="flex min-h-0 flex-1 flex-col gap-2.5 rounded-md bg-neutral-100 px-3 py-4">
+              <p className="text-base leading-6 font-bold text-field-600">已錄音資訊</p>
+              <div className="flex flex-1 items-start rounded-md border border-neutral-200 bg-white px-3 py-2.5">
+                <p className="text-sm leading-5 text-neutral-900">
+                  {line
+                    ? `[${line.t}] ${line.text}`
+                    : '本項目尚未偵測到對應逐字稿，可直接手動填寫。'}
+                </p>
+              </div>
+              <p className="text-xs leading-[18px] text-neutral-600">
+                檢測關鍵詞：{words.join('、')}
+              </p>
+            </div>
+            <button
+              onClick={() => setGuideOpen(true)}
+              className="flex shrink-0 items-center gap-4 rounded-md bg-field-50 py-3 pr-3 pl-6 text-left hover:bg-field-100"
+            >
+              <ThumbsUp className="size-[30px] shrink-0 text-field-600" />
+              <span className="flex min-w-0 flex-1 flex-col">
+                <span className="text-base leading-6 font-bold text-field-600">建議處置方式</span>
+                <span className="text-xs leading-[18px] font-medium text-field-600">
+                  給飼主看的優良飼養範例，可列印帶走
+                </span>
+              </span>
+              <ExternalLink className="size-4 shrink-0 text-field-600" />
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="rounded-md bg-neutral-200 px-3.5 py-2 text-sm leading-5 font-bold text-neutral-600 shadow-xs"
+          >
+            取消
+          </button>
+          <button
+            onClick={() => onSave({ values: form.values, ai: {} })}
+            className="rounded-md border border-field-600 bg-field-600 px-3.5 py-2 text-sm leading-5 font-bold text-white shadow-xs"
+          >
+            保存並完成此項
+          </button>
+        </div>
+      </div>
+
+      {guideOpen && <CareGuideModal item={item} onClose={() => setGuideOpen(false)} />}
+    </Modal>
+  )
+}
+
+/** 一題 —— 依 type 換成單選／複選／數字／填空；ai 為 true 時整題顯示紫色 */
+function RecordField({ field, value, ai, onChange }) {
+  const tone = ai
+    ? 'border-ai-200 bg-ai-50 text-ai-700'
+    : 'border-field-600 bg-field-50 text-neutral-900'
+
+  return (
+    <div className="flex shrink-0 flex-col gap-2">
+      <div className="flex items-center gap-1.5">
+        <p className="text-sm leading-5 font-bold text-neutral-900">{field.label}</p>
+        {ai && <Sparkles className="size-3.5 text-ai-700" />}
+      </div>
+
+      {field.type === 'radio' && (
+        <div className="flex flex-wrap gap-2">
+          {field.options.map((o) => (
+            <button
+              key={o}
+              onClick={() => onChange(o)}
+              className={`rounded-full border px-3.5 py-1.5 text-sm leading-5 font-medium ${
+                value === o ? tone : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'
+              }`}
+            >
+              {o}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {field.type === 'checkbox' && (
+        <div className="flex flex-wrap gap-2">
+          {field.options.map((o) => {
+            const list = Array.isArray(value) ? value : []
+            const on = list.includes(o)
+            return (
+              <button
+                key={o}
+                onClick={() => onChange(on ? list.filter((x) => x !== o) : [...list, o])}
+                className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-sm leading-5 font-medium ${
+                  on ? tone : 'border-neutral-300 bg-white text-neutral-700 hover:bg-neutral-50'
+                }`}
+              >
+                <span
+                  className={`flex size-3.5 items-center justify-center rounded-xs border ${
+                    on ? (ai ? 'border-ai-500 bg-ai-500' : 'border-field-600 bg-field-600') : 'border-neutral-300'
+                  }`}
+                >
+                  {on && <Check className="size-2.5 text-white" strokeWidth="3" />}
+                </span>
+                {o}
+              </button>
+            )
+          })}
+        </div>
+      )}
+
+      {field.type === 'number' && (
+        <div className="flex items-center gap-2">
+          <input
+            type="number"
+            value={value ?? ''}
+            onChange={(e) => onChange(e.target.value === '' ? undefined : Number(e.target.value))}
+            className={`h-10 w-[120px] rounded-md border px-3 text-base leading-6 font-bold outline-none ${
+              value === undefined || value === '' ? 'border-neutral-300 bg-white text-neutral-900' : tone
+            }`}
+          />
+          {field.unit && (
+            <span className="text-sm leading-5 font-medium text-neutral-600">{field.unit}</span>
+          )}
+        </div>
+      )}
+
+      {field.type === 'text' && (
+        <textarea
+          rows={2}
+          value={value ?? ''}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={field.placeholder ?? '選填'}
+          className={`w-full resize-none rounded-md border px-3.5 py-2.5 text-sm leading-5 outline-none placeholder:text-neutral-400 ${
+            value ? tone : 'border-neutral-300 bg-white text-neutral-900'
+          }`}
+        />
+      )}
+    </div>
+  )
+}
+
+/* ═══════════ 建議處置方式 / 優良飼養範例 ═══════════
+   這個畫面的觀眾是**飼主**不是動檢員 —— 現場把平板轉過去給飼主看正確做法，
+   比口頭勸導有效；離場前還可以列印一張帶 QR 的飼養建議單留給對方。
+   內容依目前這個蒐證項目挑選，定義在 store/evidence.js 的 CARE_GUIDE。 */
+function CareGuideModal({ item, onClose }) {
+  const guide = careGuideFor(item.id)
+  const [printing, setPrinting] = useState(false)
+
+  return (
+    <div className="absolute inset-0 z-[60] flex items-center justify-center">
+      <div className="absolute inset-0 bg-black/45" onClick={onClose} />
+
+      {printing ? (
+        <PrintSheet guide={guide} onBack={() => setPrinting(false)} onClose={onClose} />
+      ) : (
+        <div className="relative flex max-h-[calc(100%-48px)] w-[880px] flex-col gap-4 rounded-xl bg-white p-6 shadow-xl">
+          <div className="flex shrink-0 items-start gap-3">
+            <ThumbsUp className="mt-0.5 size-7 shrink-0 text-field-600" />
+            <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <p className="text-xl leading-[30px] font-bold text-neutral-900">{guide.title}</p>
+              <p className="text-xs leading-[18px] font-medium text-neutral-500">
+                建議處置方式｜可轉向飼主說明
+              </p>
+            </div>
+            <button onClick={onClose} className="text-neutral-500" aria-label="關閉">
+              <X className="size-6" />
+            </button>
+          </div>
+
+          <p className="shrink-0 rounded-md bg-field-50 px-4 py-3 text-sm leading-5 font-medium text-field-700">
+            {guide.lead}
+          </p>
+
+          <div className="scroll-thin flex min-h-0 flex-1 gap-4 overflow-y-auto">
+            <div className="flex min-w-0 flex-1 flex-col gap-2 rounded-md border border-field-200 bg-white p-4">
+              <p className="flex items-center gap-2 text-base leading-6 font-bold text-field-700">
+                <Check className="size-5" />
+                建議這樣做
+              </p>
+              <ul className="flex flex-col gap-2">
+                {guide.good.map((g) => (
+                  <li key={g} className="flex gap-2 text-sm leading-5 text-neutral-800">
+                    <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-field-600" />
+                    {g}
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            {guide.bad.length > 0 && (
+              <div className="flex min-w-0 flex-1 flex-col gap-2 rounded-md border border-neutral-200 bg-neutral-50 p-4">
+                <p className="flex items-center gap-2 text-base leading-6 font-bold text-danger">
+                  <X className="size-5" />
+                  現場常見問題
+                </p>
+                <ul className="flex flex-col gap-2">
+                  {guide.bad.map((b) => (
+                    <li key={b} className="flex gap-2 text-sm leading-5 text-neutral-700">
+                      <span className="mt-1.5 size-1.5 shrink-0 rounded-full bg-danger" />
+                      {b}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+
+          <p className="shrink-0 rounded-md bg-neutral-100 px-4 py-2.5 text-xs leading-[18px] font-medium text-neutral-600">
+            {guide.law}
+          </p>
+
+          <div className="flex shrink-0 items-center justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="rounded-md bg-neutral-200 px-3.5 py-2 text-sm leading-5 font-bold text-neutral-600 shadow-xs"
+            >
+              關閉
+            </button>
+            <button
+              onClick={() => setPrinting(true)}
+              className="flex items-center gap-2 rounded-md bg-field-600 px-4 py-2.5 text-sm leading-5 font-bold text-white shadow-xs"
+            >
+              <Printer className="size-[18px]" />
+              列印飼養建議給飼主
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+/** 列印預覽：A5 直式，內容＝摘要＋重點做法＋連到動保網飼養指南的 QR */
+function PrintSheet({ guide, onBack, onClose }) {
+  const { state } = useApp()
+  const c = state.activeCase
+  return (
+    <div className="relative flex max-h-[calc(100%-48px)] w-[720px] flex-col gap-4 rounded-xl bg-white p-6 shadow-xl">
+      <div className="flex shrink-0 items-center gap-3">
+        <Printer className="size-6 shrink-0 text-neutral-900" />
+        <p className="flex-1 text-xl leading-[30px] font-bold text-neutral-900">列印預覽</p>
+        <button onClick={onClose} className="text-neutral-500" aria-label="關閉">
+          <X className="size-6" />
+        </button>
+      </div>
+
+      {/* 紙本內容 */}
+      <div className="scroll-thin min-h-0 flex-1 overflow-y-auto rounded-md border border-neutral-300 bg-white p-7">
+        <div className="flex items-start justify-between gap-4 border-b-2 border-field-900 pb-3">
+          <div className="flex flex-col gap-0.5">
+            <p className="text-lg leading-7 font-bold text-field-900">飼養建議單</p>
+            <p className="text-xs leading-[18px] text-neutral-600">
+              新北市動物保護處　{c.reportedAt.slice(0, 6)} 現場稽查
+            </p>
+          </div>
+          <p className="text-xs leading-[18px] text-neutral-500">案件 {c.id}</p>
+        </div>
+
+        <p className="mt-4 text-base leading-6 font-bold text-neutral-900">{guide.title}</p>
+        <p className="mt-1.5 text-sm leading-5 text-neutral-700">{guide.lead}</p>
+
+        <div className="mt-4 flex gap-6">
+          <ul className="flex min-w-0 flex-1 flex-col gap-1.5">
+            {guide.good.map((g, i) => (
+              <li key={g} className="flex gap-2 text-sm leading-5 text-neutral-900">
+                <span className="shrink-0 font-bold text-field-700">{i + 1}.</span>
+                {g}
+              </li>
+            ))}
+          </ul>
+
+          <div className="flex w-[136px] shrink-0 flex-col items-center gap-1.5">
+            <QrArt />
+            <p className="text-center text-xs leading-[18px] font-medium text-neutral-700">
+              掃描看完整
+              <br />
+              飼養建議指南
+            </p>
+            <p className="text-center text-[10px] leading-[14px] break-all text-neutral-500">
+              {CARE_GUIDE_URL}
+            </p>
+          </div>
+        </div>
+
+        <p className="mt-4 border-t border-neutral-300 pt-3 text-xs leading-[18px] text-neutral-600">
+          法令依據：{guide.law}
+        </p>
+        <p className="mt-1.5 text-xs leading-[18px] text-neutral-500">
+          如有疑問請洽新北市動物保護處 02-2959-6353，或撥打 1959 全國動物保護專線。
+        </p>
+      </div>
+
+      <div className="flex shrink-0 items-center justify-between gap-3">
+        <p className="text-xs leading-[18px] font-medium text-neutral-500">
+          A5 直式・一頁｜列印後請飼主簽收（非強制）
+        </p>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={onBack}
+            className="rounded-md bg-neutral-200 px-3.5 py-2 text-sm leading-5 font-bold text-neutral-600 shadow-xs"
+          >
+            返回
+          </button>
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-2 rounded-md bg-field-600 px-4 py-2.5 text-sm leading-5 font-bold text-white shadow-xs"
+          >
+            <Printer className="size-[18px]" />
+            送出列印
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/*
+  QR 示意圖 —— 三個定位方塊 ＋ 由固定亂數展開的模組。
+  ⚠️ 這是視覺佔位，不是可掃描的 QR：原型不引外部函式庫（離線 demo 要能跑），
+     實作階段請改用真正的 QR 產生器編碼 CARE_GUIDE_URL。網址已同時以文字印在下方。
+*/
+function QrArt() {
+  const n = 21
+  const cells = []
+  let seed = 20260811
+  const rand = () => {
+    seed = (seed * 1103515245 + 12345) % 2147483648
+    return seed / 2147483648
+  }
+  const inFinder = (r, c) =>
+    (r < 7 && c < 7) || (r < 7 && c >= n - 7) || (r >= n - 7 && c < 7)
+  for (let r = 0; r < n; r += 1) {
+    for (let c = 0; c < n; c += 1) {
+      if (inFinder(r, c)) continue
+      if (rand() > 0.55) cells.push([r, c])
+    }
+  }
+  const finder = (r, c) => (
+    <g key={`f${r}${c}`}>
+      <rect x={c} y={r} width="7" height="7" fill="currentColor" />
+      <rect x={c + 1} y={r + 1} width="5" height="5" fill="#fff" />
+      <rect x={c + 2} y={r + 2} width="3" height="3" fill="currentColor" />
+    </g>
+  )
+  return (
+    <svg viewBox={`-1 -1 ${n + 2} ${n + 2}`} className="size-[120px] text-neutral-900">
+      <rect x="-1" y="-1" width={n + 2} height={n + 2} fill="#fff" />
+      {finder(0, 0)}
+      {finder(0, n - 7)}
+      {finder(n - 7, 0)}
+      {cells.map(([r, c]) => (
+        <rect key={`${r}-${c}`} x={c} y={r} width="1" height="1" fill="currentColor" />
+      ))}
+    </svg>
   )
 }

@@ -190,6 +190,40 @@ export function Modal({ open, onClose, title, children, width = 720, footer }) {
   )
 }
 
+/**
+ * 現場照片示意圖 —— 不引外部圖片（asset URL 會過期、離線 demo 也要能跑）。
+ * seed 不同就換一個構圖，讓「同一個項目拍的多張不同角度」看得出差別。
+ */
+export function PhotoArt({ seed = 0, className = '' }) {
+  const dx = (seed % 3) * 26 - 26
+  const dy = ((seed * 5) % 3) * 18 - 18
+  const s = 1 + ((seed * 7) % 4) * 0.12
+  const id = `photoart-${seed}`
+  return (
+    <svg
+      viewBox="0 0 160 120"
+      className={className}
+      preserveAspectRatio="xMidYMid slice"
+      aria-hidden="true"
+    >
+      <defs>
+        <linearGradient id={id} x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#71827d" />
+          <stop offset="100%" stopColor="#232d2b" />
+        </linearGradient>
+      </defs>
+      <rect width="160" height="120" fill={`url(#${id})`} />
+      <rect x="0" y="0" width="160" height="34" fill="#8b9a95" opacity="0.35" />
+      <g style={{ transform: `translate(${dx}px, ${dy}px) scale(${s})`, transformOrigin: '80px 70px' }}>
+        <ellipse cx="70" cy="86" rx="46" ry="28" fill="#5b514a" opacity="0.9" />
+        <circle cx="103" cy="62" r="22" fill="#6a5f56" opacity="0.9" />
+        <ellipse cx="119" cy="54" rx="6" ry="9" fill="#4c433c" opacity="0.85" />
+      </g>
+      <ellipse cx="24" cy="108" rx="22" ry="10" fill="#39474a" opacity="0.7" />
+    </svg>
+  )
+}
+
 /** 佔位圖：照片/地圖/街景一律用這個，不引外部圖片（離線 demo 也要能跑） */
 export function Placeholder({ label, className = '', tone = 'photo' }) {
   const tones = {

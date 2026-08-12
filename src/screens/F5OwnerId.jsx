@@ -2,7 +2,13 @@ import { useEffect, useState } from 'react'
 import { navigate } from '../router.jsx'
 import { useApp } from '../store/AppState.jsx'
 import { AiBadge, Button } from '../components/ui.jsx'
-import { Camera, ChevronLeft, Edit, User } from '../components/icons.jsx'
+import {
+  ArrowDownRight,
+  Camera,
+  ChevronLeft,
+  Edit,
+  User,
+} from '../components/icons.jsx'
 
 /*
   F5 飼主身分查詢 ★AI —— Figma page 10904:2464
@@ -21,28 +27,6 @@ import { Camera, ChevronLeft, Edit, User } from '../components/icons.jsx'
   ⚠️ 相機畫面、身分證件一律 CSS 漸層 + inline SVG 自繪，不引 Figma asset URL（7 天過期）。
 */
 
-/* ── 本頁缺的圖示（不動共用的 icons.jsx，避免多個 subagent 互相覆蓋） ── */
-function Svg({ children, className = 'size-6', ...rest }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      {...rest}
-    >
-      {children}
-    </svg>
-  )
-}
-const ArrowDownRight = (p) => (
-  <Svg {...p}>
-    <path d="M7 7l10 10M17 9v8H9" />
-  </Svg>
-)
 
 /* OCR 辨識結果（AI 產出的假資料）—— 匿名格式見檔頭說明 */
 const OCR_RESULT = {

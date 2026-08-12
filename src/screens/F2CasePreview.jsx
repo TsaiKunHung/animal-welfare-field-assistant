@@ -2,7 +2,19 @@ import { useState } from 'react'
 import { navigate } from '../router.jsx'
 import { useApp } from '../store/AppState.jsx'
 import { Modal, Placeholder } from '../components/ui.jsx'
-import { ChevronLeft, ChevronDown, X, Check } from '../components/icons.jsx'
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  ChevronDown,
+  ChevronLeft,
+  ChevronUp,
+  Lock,
+  Map,
+  Maximize2,
+  MoreHorizontal,
+  X,
+} from '../components/icons.jsx'
 
 /*
   F2 案件預覽頁 — 出勤前確認頁
@@ -16,70 +28,7 @@ import { ChevronLeft, ChevronDown, X, Check } from '../components/icons.jsx'
   子畫面全部在本檔用 useState 切換，不另開路由。
 */
 
-/* ── 本頁缺的圖示（icons.jsx 沒有；避免多個 subagent 同時改共用檔） ── */
-function Svg({ children, className = 'size-6', ...rest }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      {...rest}
-    >
-      {children}
-    </svg>
-  )
-}
-const ChevronUp = (p) => (
-  <Svg {...p}>
-    <path d="M18 15l-6-6-6 6" />
-  </Svg>
-)
-const MoreHorizontal = (p) => (
-  <Svg {...p}>
-    <circle cx="5" cy="12" r="1" />
-    <circle cx="12" cy="12" r="1" />
-    <circle cx="19" cy="12" r="1" />
-  </Svg>
-)
-const Maximize2 = (p) => (
-  <Svg {...p}>
-    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-  </Svg>
-)
-const ArrowLeft = (p) => (
-  <Svg {...p}>
-    <path d="M19 12H5M12 19l-7-7 7-7" />
-  </Svg>
-)
-const ArrowRightIcon = (p) => (
-  <Svg {...p}>
-    <path d="M5 12h14M12 5l7 7-7 7" />
-  </Svg>
-)
-const MapIcon = (p) => (
-  <Svg {...p}>
-    <path d="M9 4L3 6.5v13L9 17l6 2.5 6-2.5v-13L15 6.5 9 4z" />
-    <path d="M9 4v13M15 6.5v13" />
-  </Svg>
-)
-
-/* ── 畫面專屬靜態文案（Figma 稿面文字，全域 state 沒有的欄位） ── */
-const CASE_TYPES = [
-  '全部類型',
-  '不當飼養',
-  '棄養動物',
-  '犬隻疏縱',
-  '未辦理寵物登記',
-  '未絕育及未申報繁殖',
-  '寵物食品查驗問題',
-  '未經許可經營寵物繁殖／買賣／寄養',
-  '不當捕捉方式',
-  '類型不明',
-]
+/* 圖示一律用共用 icons.jsx（Feather），本頁不自繪。 */
 
 /** Figma 稿面標題是「四維路米克斯貓｜大安區」，這裡改成與全域 activeCase 同一件案子 */
 const CASE_TITLE = '文化路米克斯犬｜板橋區'
@@ -239,8 +188,7 @@ export default function F2CasePreview() {
   const c = state.activeCase
 
   const [reporterOpen, setReporterOpen] = useState(false)
-  const [typeOpen, setTypeOpen] = useState(false)
-  const [caseType, setCaseType] = useState('不當飼養')
+  const caseType = '不當飼養' // 唯讀：案件類型由 1959 派案決定，外勤端不可改
   const [historyOpen, setHistoryOpen] = useState(false)
 
   const [streetView, setStreetView] = useState(false)
@@ -297,7 +245,7 @@ export default function F2CasePreview() {
                 className="flex size-6 items-center justify-center text-field-700"
                 aria-label="查看街景圖"
               >
-                <MapIcon className="size-6" />
+                <Map className="size-6" />
               </button>
             }
           />
@@ -397,33 +345,10 @@ export default function F2CasePreview() {
 
         {/* ── 右：案件詳細資訊 ── */}
         <div className="scroll-thin flex w-[679px] flex-col gap-3 overflow-y-auto rounded-md border border-neutral-200 bg-white px-6 py-5">
+          {/* 案件類型是 1959 派案時就決定的，外勤端唯讀（原本是可改的 select，2026-08-11 移除） */}
           <FieldLabel>案件類型：</FieldLabel>
-          <div className="relative w-full shrink-0">
-            <SelectRow
-              onClick={() => setTypeOpen((v) => !v)}
-              trailing={<ChevronDown className="size-5 text-neutral-700" />}
-            >
-              {caseType}
-            </SelectRow>
-            {typeOpen && (
-              <div className="absolute left-0 right-0 top-[56px] z-20 flex max-h-[320px] flex-col overflow-y-auto rounded-md border border-neutral-200 bg-white py-1 shadow-lg">
-                {CASE_TYPES.map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => {
-                      setCaseType(t)
-                      setTypeOpen(false)
-                    }}
-                    className={`flex items-center px-3.5 py-2.5 text-left text-base leading-6 font-medium text-neutral-900 ${
-                      t === caseType ? 'bg-neutral-50' : 'hover:bg-neutral-50'
-                    }`}
-                  >
-                    {t}
-                  </button>
-                ))}
-              </div>
-            )}
+          <div className="flex h-[52px] w-full shrink-0 items-center rounded-md border border-neutral-200 bg-neutral-50 px-3.5 py-2.5">
+            <span className="text-base leading-6 font-medium text-neutral-900">{caseType}</span>
           </div>
 
           <FieldLabel>器具準備：</FieldLabel>
@@ -560,7 +485,7 @@ export default function F2CasePreview() {
               className="flex items-center justify-center rounded-md border border-neutral-300 bg-white p-2 shadow-xs"
               aria-label="下一張"
             >
-              <ArrowRightIcon className="size-5 text-neutral-700" />
+              <ArrowRight className="size-5 text-neutral-700" />
             </button>
           </div>
         </div>

@@ -3,12 +3,18 @@ import { navigate } from '../router.jsx'
 import { useApp } from '../store/AppState.jsx'
 import PetNet, { OWNER } from '../components/petnet.jsx'
 import {
+  AlertOctagon,
+  BookOpen,
   Camera,
   Check,
   ChevronLeft,
   Cloud,
+  CreditCard,
+  Edit,
   FileText,
+  Globe,
   Images,
+  MessageSquare,
   Search,
   User,
   X,
@@ -40,51 +46,6 @@ import {
   ⚠️ 稿面舊版殘留：案件寫台北市/0927492927（本檔一律用 state.activeCase）。
 */
 
-/* ── 本頁缺的圖示（不動共用 icons.jsx） ── */
-function Svg({ children, className = 'size-6', ...rest }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      {...rest}
-    >
-      {children}
-    </svg>
-  )
-}
-const CreditCard = (p) => (
-  <Svg {...p}>
-    <rect x="2" y="5" width="20" height="14" rx="2" />
-    <path d="M2 10h20" />
-  </Svg>
-)
-const MessageSquare = (p) => (
-  <Svg {...p}>
-    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-  </Svg>
-)
-const BookOpen = (p) => (
-  <Svg {...p}>
-    <path d="M12 7v14M12 7a4 4 0 00-4-4H3v14h5a4 4 0 014 4M12 7a4 4 0 014-4h5v14h-5a4 4 0 00-4 4" />
-  </Svg>
-)
-const AlertOctagon = (p) => (
-  <Svg {...p}>
-    <path d="M8 2h8l6 6v8l-6 6H8l-6-6V8z" />
-    <path d="M12 8v5M12 16.5v.01" />
-  </Svg>
-)
-const Globe = (p) => (
-  <Svg {...p}>
-    <circle cx="12" cy="12" r="9" />
-    <path d="M3 12h18M12 3c2.5 2.6 2.5 15 0 18M12 3c-2.5 2.6-2.5 15 0 18" />
-  </Svg>
-)
 
 const CHIP_NO = '900115000530794'
 
@@ -252,7 +213,7 @@ export default function F6PetQuery() {
                       className="text-neutral-900"
                       aria-label="修改晶片號碼"
                     >
-                      <PenBox className="size-6" />
+                      <Edit className="size-6" />
                     </button>
                   </div>
                   <button
@@ -358,8 +319,14 @@ export default function F6PetQuery() {
 
                 <div className="flex w-[326px] flex-col gap-4">
                   <p className="text-xl leading-[30px] font-bold text-neutral-900">快速操作</p>
+                  {/* 這裡是「為這隻寵物拍照」，要明確指定拍的是動物外觀那一項 ——
+                      不指定的話 F10 會退回「第一個未完成的拍照項目」（可能是環境類），
+                      拍攝引導與寵物名字就都對不上了。 */}
                   <button
-                    onClick={() => navigate('f10')}
+                    onClick={() => {
+                      dispatch({ type: 'SET_CAMERA_TARGET', id: 'ani-1' })
+                      navigate('f10')
+                    }}
                     className="flex h-12 w-full items-center justify-center gap-2.5 rounded-md bg-field-600 px-3 text-lg leading-7 font-bold text-white shadow-xs"
                   >
                     <Camera className="size-[22px]" />
@@ -392,12 +359,6 @@ export default function F6PetQuery() {
 
 /* ───────────────────────── 共用小元件 ───────────────────────── */
 
-const PenBox = (p) => (
-  <Svg {...p}>
-    <path d="M12 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" />
-    <path d="M18.5 2.5a2.1 2.1 0 013 3L12 15l-4 1 1-4z" />
-  </Svg>
-)
 
 /* 對話框尺寸一律照 Figma frame：
    lg 869×645（選擇／掃描）、sm 507×377（輸入證件號碼）、

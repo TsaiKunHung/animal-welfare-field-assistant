@@ -8,8 +8,9 @@ import {
   ChevronLeft,
   ChevronUp,
   Cloud,
+  BookOpen,
   FileText,
-  Images,
+  Image,
   Lock,
   MoreHorizontal,
   Search,
@@ -30,48 +31,16 @@ import {
   ⚠️ 左欄唯讀、右欄可編輯 —— 這頁的重點是「蒐證階段仍可隨時回頭補充編輯案件詳細資訊」。
 */
 
-/* ── 本頁缺的圖示（不動共用的 icons.jsx，避免多個 subagent 互相覆蓋） ── */
-function Svg({ children, className = 'size-6', ...rest }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      {...rest}
-    >
-      {children}
-    </svg>
-  )
-}
-const BookOpen = (p) => (
-  <Svg {...p}>
-    <path d="M12 7v14M12 7a4 4 0 00-4-4H3v14h5a4 4 0 014 4M12 7a4 4 0 014-4h5v14h-5a4 4 0 00-4 4" />
-  </Svg>
-)
+/* 圖示一律用共用 icons.jsx（Feather），本頁不自繪。 */
 
 const TOOLS = [
   { key: 'f5', label: '飼主身分查詢', Icon: User },
   { key: 'f6', label: '寵物晶片查詢', Icon: Search },
-  { key: 'f7', label: '瀏覽案件照片', Icon: Images },
+  { key: 'f7', label: '瀏覽案件照片', Icon: Image },
   { key: 'f9', label: '案件內容', Icon: FileText },
   { key: 'notebook', label: '筆記本', Icon: BookOpen },
 ]
 
-const CASE_TYPES = [
-  '不當飼養',
-  '棄養動物',
-  '犬隻疏縱',
-  '未辦理寵物登記',
-  '未絕育及未申報繁殖',
-  '寵物食品查驗問題',
-  '未經許可經營寵物繁殖／買賣／寄養',
-  '不當捕捉方式',
-  '類型不明',
-]
 
 /* 右欄初值（Figma F9 右欄文案，改成本案的犬隻情境與新北市） */
 const INITIAL_FORM = {
@@ -217,8 +186,7 @@ export default function F9CaseContent() {
 
   const [reporterOpen, setReporterOpen] = useState(false) // F9-1-1
   const [form, setForm] = useState(INITIAL_FORM)
-  const [caseType, setCaseType] = useState(c.type)
-  const [typeOpen, setTypeOpen] = useState(false)
+  const caseType = c.type // 唯讀：案件類型由 1959 派案決定，外勤端不可改
   const [historyOpen, setHistoryOpen] = useState(false)
   const [refOpen, setRefOpen] = useState(false)
   const [lawOpen, setLawOpen] = useState(false)
@@ -276,16 +244,9 @@ export default function F9CaseContent() {
               <Divider />
 
               <InfoRow label="報案時間：" value={c.reportedAt} />
-              <InfoRow
-                label="地址："
-                value={c.address}
-                right={
-                  <span className="flex shrink-0 items-center gap-1 rounded-full bg-neutral-200 px-2 py-0.5 text-xs leading-[18px] font-medium text-neutral-600">
-                    <Lock className="size-3" />
-                    唯讀
-                  </span>
-                }
-              />
+              {/* 稿面這裡有一顆「唯讀」徽章，實作拿掉 —— 左欄整欄本來就不可編輯，
+                  單獨標一個欄位反而讓人以為其他欄位可以改 */}
+              <InfoRow label="地址：" value={c.address} />
 
               <div className="flex w-full shrink-0 items-center justify-between">
                 <span className="text-sm leading-5 font-medium text-neutral-500">報案人：</span>
@@ -389,33 +350,11 @@ export default function F9CaseContent() {
                 </p>
               </div>
 
+              {/* 案件類型是 1959 派案時就決定的，外勤端唯讀（原本是可改的 select，2026-08-11 移除）。
+                  這一欄以下的提醒事項／器具準備／蒐證重點才是現場可編輯的。 */}
               <FormLabel>案件類型：</FormLabel>
-              <div className="relative w-full shrink-0">
-                <SelectRow
-                  onClick={() => setTypeOpen((v) => !v)}
-                  trailing={<ChevronDown className="size-5 text-neutral-700" />}
-                >
-                  {caseType}
-                </SelectRow>
-                {typeOpen && (
-                  <div className="absolute top-[56px] right-0 left-0 z-20 flex max-h-[280px] flex-col overflow-y-auto rounded-md border border-neutral-200 bg-white py-1 shadow-lg">
-                    {CASE_TYPES.map((t) => (
-                      <button
-                        key={t}
-                        onClick={() => {
-                          setCaseType(t)
-                          setTypeOpen(false)
-                          setDirty(true)
-                        }}
-                        className={`flex items-center px-3.5 py-2.5 text-left text-base leading-6 font-medium text-neutral-900 ${
-                          t === caseType ? 'bg-neutral-50' : 'hover:bg-neutral-50'
-                        }`}
-                      >
-                        {t}
-                      </button>
-                    ))}
-                  </div>
-                )}
+              <div className="flex h-[52px] w-full shrink-0 items-center rounded-md border border-neutral-200 bg-neutral-50 px-3.5 py-2.5">
+                <span className="text-base leading-6 font-medium text-neutral-900">{caseType}</span>
               </div>
 
               <FormLabel hint={<AiBadge>AI 整理</AiBadge>}>提醒事項：</FormLabel>

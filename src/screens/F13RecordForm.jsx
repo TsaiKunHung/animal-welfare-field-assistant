@@ -5,12 +5,15 @@ import { AiBadge, Button } from '../components/ui.jsx'
 import {
   AlignLeft,
   ChevronLeft,
+  Clipboard,
   Clock,
   Cloud,
+  Cpu,
   Edit,
   FileText,
   Images,
   Lock,
+  Maximize2,
   Pause,
   Play,
   Search,
@@ -36,42 +39,6 @@ import {
   - 稿面照片是 Figma asset URL（7 天過期），一律改成漸層 + inline SVG 自繪。
 */
 
-/* ── 本頁缺的圖示（不動共用的 icons.jsx，避免多個 subagent 互相覆蓋） ── */
-function Svg({ children, className = 'size-6', ...rest }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      {...rest}
-    >
-      {children}
-    </svg>
-  )
-}
-const Clipboard = (p) => (
-  <Svg {...p}>
-    <rect x="8" y="2" width="8" height="4" rx="1" />
-    <path d="M16 4h2a2 2 0 012 2v14a2 2 0 01-2 2H6a2 2 0 01-2-2V6a2 2 0 012-2h2" />
-    <path d="M9 12h6M9 16h4" />
-  </Svg>
-)
-const Cpu = (p) => (
-  <Svg {...p}>
-    <rect x="5" y="5" width="14" height="14" rx="2" />
-    <rect x="9" y="9" width="6" height="6" rx="1" />
-    <path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3" />
-  </Svg>
-)
-const Maximize2 = (p) => (
-  <Svg {...p}>
-    <path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7" />
-  </Svg>
-)
 
 /* ── 左側工具列（Figma「Field tool rail」，與 F12 同一條，案件紀錄單為目前頁） ── */
 const TOOLS = [

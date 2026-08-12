@@ -33,6 +33,14 @@ const initialState = {
   // F3 錄音與逐字稿
   recording: { status: 'idle', elapsed: 0 }, // idle | recording | paused | done
   transcript: [], // { t, speaker, text, marked }
+  // AI 從逐字稿檢核到的內容 { [checklistId]: 那一句 }。放全域才不會離開 F3 再回來就消失
+  aiHits: {},
+  /*
+    文字紀錄表單的作答內容 { [checklistId]: { values: {欄位: 值}, ai: {欄位: true} } }
+    ai 為 true 代表這格是 AI 自動帶入、還沒被動檢員覆核（畫面上顯示紫色）；
+    動檢員改動或按確認後就從 ai 移除，變成黑色 —— 系統的定位是「AI 先寫，人做最後審核」。
+  */
+  records: {},
 
   // F3 evidence checklist（三大類，來源 Figma F3）
   checklist: [
@@ -47,7 +55,9 @@ const initialState = {
   ],
 
   notes: [], // F8 筆記本
-  photos: [], // { id, category, label, checklistId, tags: [] }
+  photos: [], // { id, category, label, checklistId, shot, tags: [] }
+  // F3 點蒐證清單的相機時寫入；F10 靠它知道現在在拍哪一項、要引導哪些角度
+  cameraTarget: null,
   ownerId: null, // F5 OCR 結果
   petRecord: null, // F6 寵物登記查詢結果
   aiSummary: null, // F12 產出
@@ -65,6 +75,12 @@ function reducer(state, action) {
       return { ...state, recording: { ...state.recording, ...action.payload } }
     case 'PUSH_TRANSCRIPT':
       return { ...state, transcript: [...state.transcript, action.payload] }
+    case 'ADD_AI_HIT':
+      return { ...state, aiHits: { ...state.aiHits, [action.id]: action.payload } }
+
+    /** 存整份文字紀錄表單（payload = { values, ai }） */
+    case 'SET_RECORD':
+      return { ...state, records: { ...state.records, [action.id]: action.payload } }
     case 'UPDATE_TRANSCRIPT':
       return {
         ...state,
@@ -80,13 +96,14 @@ function reducer(state, action) {
           c.id === action.id ? { ...c, done: action.done ?? !c.done } : c,
         ),
       }
-    case 'ADD_CHECK_ITEM':
-      return { ...state, checklist: [...state.checklist, action.payload] }
 
     case 'ADD_NOTE':
       return { ...state, notes: [...state.notes, action.payload] }
     case 'REMOVE_NOTE':
       return { ...state, notes: state.notes.filter((n) => n.id !== action.id) }
+
+    case 'SET_CAMERA_TARGET':
+      return { ...state, cameraTarget: action.id }
 
     case 'ADD_PHOTO': {
       const photo = action.payload

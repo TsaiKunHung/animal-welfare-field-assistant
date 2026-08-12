@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronDown, Search, User } from './icons.jsx'
+import {
+  ChevronDown,
+  Copy,
+  EyeOff,
+  Search,
+  User,
+} from './icons.jsx'
 
 /*
   模擬「寵物登記管理資訊網」(pet.gov.tw) —— F6 內嵌瀏覽器的內容
@@ -840,33 +846,5 @@ function SiteInput({ value, onChange, placeholder, w, highlight }) {
 
 /* ─────────────────────── 本檔用到、共用 icons.jsx 沒有的圖示 ─────────────────────── */
 
-function Svg({ children, className = 'size-6', ...rest }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      {...rest}
-    >
-      {children}
-    </svg>
-  )
-}
 
-const Copy = (p) => (
-  <Svg {...p}>
-    <rect x="9" y="9" width="12" height="12" rx="2" />
-    <path d="M5 15H4a1 1 0 01-1-1V4a1 1 0 011-1h10a1 1 0 011 1v1" />
-  </Svg>
-)
 
-const EyeOff = (p) => (
-  <Svg {...p}>
-    <path d="M10.6 6.2A9 9 0 0121 12a17 17 0 01-2.6 3.4M6.6 6.6A17 17 0 003 12a9 9 0 0012.3 4.9" />
-    <path d="M2 2l20 20" />
-  </Svg>
-)

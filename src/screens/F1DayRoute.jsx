@@ -319,31 +319,56 @@ export default function F1DayRoute() {
   const [cases, setCases] = useState(initialCases)
   const [selectedId, setSelectedId] = useState(initialCases[0].id)
   const [law, setLaw] = useState(null)
-  const dragFrom = useRef(null)
   const cardRefs = useRef({})
 
-  const move = (index, delta) => {
-    const to = index + delta
-    if (to < 0 || to >= cases.length) return
-    setCases((prev) => {
-      const next = [...prev]
-      const [item] = next.splice(index, 1)
-      next.splice(to, 0, item)
-      return next
-    })
+  /* ── 拖曳排序 ──
+     Figma 只畫了拖曳把手。iPad Safari 不會觸發 HTML5 的 drag 事件，
+     所以改用 pointer 事件自己算：按住把手 → 依指標 Y 找出要插入的位置 → 放開才真的搬移。 */
+  const rowRefs = useRef({})
+  const [dragId, setDragId] = useState(null)
+  const [overIndex, setOverIndex] = useState(null)
+  const dragState = useRef(null)
+
+  const startDrag = (e, index, id) => {
+    e.stopPropagation()
+    e.currentTarget.setPointerCapture?.(e.pointerId)
+    dragState.current = { from: index, to: index }
+    setDragId(id)
+    setOverIndex(index)
+
+    const onMove = (ev) => {
+      /* 用每一列的中線判斷指標現在落在第幾格 */
+      const rows = cases.map((c) => rowRefs.current[c.id]).filter(Boolean)
+      let to = rows.length - 1
+      for (let k = 0; k < rows.length; k += 1) {
+        const r = rows[k].getBoundingClientRect()
+        if (ev.clientY < r.top + r.height / 2) {
+          to = k
+          break
+        }
+      }
+      dragState.current.to = to
+      setOverIndex(to)
+    }
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove)
+      window.removeEventListener('pointerup', onUp)
+      const { from, to } = dragState.current ?? {}
+      dragState.current = null
+      setDragId(null)
+      setOverIndex(null)
+      if (from == null || to == null || from === to) return
+      setCases((prev) => {
+        const next = [...prev]
+        const [item] = next.splice(from, 1)
+        next.splice(to, 0, item)
+        return next
+      })
+    }
+    window.addEventListener('pointermove', onMove)
+    window.addEventListener('pointerup', onUp)
   }
 
-  const dropAt = (index) => {
-    const from = dragFrom.current
-    dragFrom.current = null
-    if (from == null || from === index) return
-    setCases((prev) => {
-      const next = [...prev]
-      const [item] = next.splice(from, 1)
-      next.splice(index, 0, item)
-      return next
-    })
-  }
 
   const selectCase = (id) => {
     setSelectedId(id)
@@ -393,18 +418,22 @@ export default function F1DayRoute() {
               return (
                 <div
                   key={c.id}
-                  draggable
-                  onDragStart={() => (dragFrom.current = i)}
-                  onDragOver={(e) => e.preventDefault()}
-                  onDrop={() => dropAt(i)}
+                  ref={(el) => (rowRefs.current[c.id] = el)}
                   onClick={() => selectCase(c.id)}
                   className={`flex w-full shrink-0 cursor-pointer items-center gap-3 rounded-[10px] border bg-white px-3.5 py-3 transition-colors ${
-                    active ? 'shadow-xs' : 'border-hairline hover:bg-neutral-50'
+                    dragId === c.id ? 'opacity-50' : ''
+                  } ${active ? 'shadow-xs' : 'border-hairline hover:bg-neutral-50'} ${
+                    overIndex === i && dragId !== c.id ? 'border-field-600' : ''
                   }`}
-                  style={active ? { borderColor: tone.bg } : undefined}
+                  style={active && overIndex !== i ? { borderColor: tone.bg } : undefined}
                   data-figma="11278:5776"
                 >
-                  <Handle />
+                  <span
+                    onPointerDown={(e) => startDrag(e, i, c.id)}
+                    className="shrink-0 cursor-grab touch-none active:cursor-grabbing"
+                  >
+                    <Handle />
+                  </span>
                   <Marker letter={LETTERS[i]} tone={tone} />
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
                     <p className="truncate text-xs leading-[18px] font-medium text-neutral-500">
@@ -413,30 +442,6 @@ export default function F1DayRoute() {
                     <p className="truncate text-sm leading-5 font-bold text-neutral-900">
                       {c.title}
                     </p>
-                  </div>
-                  <div className="flex shrink-0 flex-col">
-                    <button
-                      className="flex size-5 items-center justify-center rounded-xs text-neutral-400 hover:bg-neutral-100 disabled:opacity-25"
-                      disabled={i === 0}
-                      aria-label="上移"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        move(i, -1)
-                      }}
-                    >
-                      <ChevronDown className="size-3.5 rotate-180" />
-                    </button>
-                    <button
-                      className="flex size-5 items-center justify-center rounded-xs text-neutral-400 hover:bg-neutral-100 disabled:opacity-25"
-                      disabled={i === cases.length - 1}
-                      aria-label="下移"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        move(i, 1)
-                      }}
-                    >
-                      <ChevronDown className="size-3.5" />
-                    </button>
                   </div>
                 </div>
               )

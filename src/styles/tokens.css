@@ -123,6 +123,39 @@ button {
   font-family: inherit;
 }
 
+/*
+  錄音波形：每根柱子各自用不同的週期與相位做垂直呼吸，疊起來就不會像整排一起跳。
+  用 transform 而不是改 height —— 只跑在 compositor 上，iPad 也不會掉幀。
+*/
+@keyframes wave-bar {
+  0% {
+    transform: scaleY(0.22);
+  }
+  100% {
+    transform: scaleY(1);
+  }
+}
+.wave-bar {
+  transform-origin: center;
+  transform: scaleY(0.22);
+}
+.wave-on .wave-bar {
+  animation-name: wave-bar;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.5, 1);
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+/* 暫停時波形凍在原地，不是歸零 —— 對應「已暫停」而不是「沒在錄」 */
+.wave-paused .wave-bar {
+  animation-play-state: paused;
+}
+@media (prefers-reduced-motion: reduce) {
+  .wave-on .wave-bar {
+    animation: none;
+    transform: scaleY(0.5);
+  }
+}
+
 /* 捲軸：iPad 上不佔位，桌機上細一點，避免版型與 Figma 差一條捲軸寬 */
 .scroll-thin {
   scrollbar-width: thin;

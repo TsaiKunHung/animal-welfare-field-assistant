@@ -5,16 +5,20 @@ import { AiBadge } from '../components/ui.jsx'
 import {
   Camera,
   Check,
+  CheckSquare,
   ChevronDown,
   ChevronLeft,
   ChevronUp,
-  Images,
+  Image,
   MapPin,
+  MessageSquare,
   Plus,
+  PlusCircle,
   Sparkles,
   Trash,
   X,
 } from '../components/icons.jsx'
+import { DOT_BY_GROUP, TAG_GROUPS, TAG_LIBRARY } from '../store/evidence.js'
 
 /*
   F7 瀏覽案件照片 — Figma page 10904:2467（13042×5125，get_metadata 會爆，
@@ -37,69 +41,7 @@ import {
   ⚠️ 照片一律 <Placeholder> 風格的漸層 + inline SVG 自繪，不引 Figma asset URL（7 天過期）。
 */
 
-/* ── 本頁缺的圖示（不動共用的 icons.jsx，避免多個 subagent 互相覆蓋） ── */
-function Svg({ children, className = 'size-6', ...rest }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className={className}
-      {...rest}
-    >
-      {children}
-    </svg>
-  )
-}
-const CheckSquare = (p) => (
-  <Svg {...p}>
-    <path d="M9 11l3 3L22 4" />
-    <path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" />
-  </Svg>
-)
-const PlusCircle = (p) => (
-  <Svg {...p}>
-    <circle cx="12" cy="12" r="9" />
-    <path d="M12 8v8M8 12h8" />
-  </Svg>
-)
-const MessageSquare = (p) => (
-  <Svg {...p}>
-    <path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z" />
-  </Svg>
-)
-
-/* ── 標籤分類（Figma「標籤」component set 的 4 個 variant ＋ 未分類） ── */
-const TAG_GROUPS = [
-  { key: '動物身份', dot: 'bg-blue-500' },
-  { key: '健康狀況', dot: 'bg-red-500' },
-  { key: '環境', dot: 'bg-yellow-500' },
-  { key: '照護狀態', dot: 'bg-green-500' },
-]
-const DOT_BY_GROUP = {
-  動物身份: 'bg-blue-500',
-  健康狀況: 'bg-red-500',
-  環境: 'bg-yellow-500',
-  照護狀態: 'bg-green-500',
-  未分類: 'bg-neutral-400',
-}
-
-/* 標籤庫（Figma 是貓案，這裡換成本案的米克斯犬情境） */
-const TAG_LIBRARY = {
-  動物身份: ['犬·米克斯', '成犬·公', '無頸圈'],
-  健康狀況: ['毛髮局部脫落', '精神萎靡', '體態偏瘦'],
-  環境: ['陽台鐵籠', '排泄物堆積', '通風不良'],
-  照護狀態: ['飲水不足', '飼料未補充', '未定期清理'],
-}
-
-/* AI 命名：依照片分類自動建議的分類標籤組合（★AI） */
-const AI_NAME_BY_CATEGORY = {
-  動物照片: '動物身份·健康狀況·照護狀態',
-  環境照片: '環境·照護狀態·健康狀況',
-}
+/* 標籤分類／色點／標籤庫改由 store/evidence.js 共用（F10 拍完的標籤建議吃同一份）*/
 
 const CATEGORIES = ['動物照片', '環境照片']
 
@@ -314,7 +256,7 @@ export default function F7Photos() {
                     onClick={exitSelect}
                     className="flex h-12 items-center justify-center gap-2.5 rounded-md bg-field-600 px-3 py-1 text-lg leading-7 font-bold text-white"
                   >
-                    <Images className="size-6" />
+                    <Image className="size-6" />
                     完成
                   </button>
                   <button
@@ -427,7 +369,7 @@ export default function F7Photos() {
                               onClick={() => addPhotoFromAlbum(g.name)}
                               className="flex items-center px-4 hover:bg-neutral-50"
                             >
-                              <Images className="size-6 shrink-0 text-neutral-600" />
+                              <Image className="size-6 shrink-0 text-neutral-600" />
                               <span className="flex-1 px-3.5 py-2.5 text-left text-base leading-6 font-medium text-neutral-600">
                                 由本機相簿選取
                               </span>
@@ -670,11 +612,6 @@ function PhotoDetail({ photo, onClose, onTags, recording, dispatch }) {
 
   /* F7-6：點照片任意位置放定位標籤 */
   const [draftPin, setDraftPin] = useState(null) // {x,y}
-  /* AI 命名 */
-  const suggestion = AI_NAME_BY_CATEGORY[photo.category] ?? '動物身份·環境·照護狀態'
-  const [aiName, setAiName] = useState(suggestion)
-  const [aiEditing, setAiEditing] = useState(false)
-  const [aiAdopted, setAiAdopted] = useState(false)
 
   const addTag = (tag, pos) =>
     onTags([...tags, { id: uid('tag'), ...tag, x: pos?.x ?? null, y: pos?.y ?? null }])
@@ -689,25 +626,6 @@ function PhotoDetail({ photo, onClose, onTags, recording, dispatch }) {
     })
   }
 
-  const adoptAi = () => {
-    const parts = aiName
-      .split(/[·・、,]/)
-      .map((s) => s.trim())
-      .filter(Boolean)
-    const next = [...tags]
-    parts.forEach((label) => {
-      if (next.some((t) => t.label === label && t.x == null)) return
-      next.push({
-        id: uid('tag'),
-        label,
-        group: DOT_BY_GROUP[label] ? label : '未分類',
-        x: null,
-        y: null,
-      })
-    })
-    onTags(next)
-    setAiAdopted(true)
-  }
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden bg-neutral-100">
@@ -827,7 +745,7 @@ function PhotoDetail({ photo, onClose, onTags, recording, dispatch }) {
           <div className="flex shrink-0 flex-col gap-4">
             <div className="flex w-full items-center justify-between">
               <div className="flex items-center gap-2">
-                <Images className="size-6 text-neutral-800" />
+                <Image className="size-6 text-neutral-800" />
                 <p className="text-xl leading-[30px] font-bold text-neutral-800">整張照片</p>
               </div>
               <p className="text-lg leading-7 font-medium text-neutral-800">{whole.length}</p>
@@ -844,46 +762,6 @@ function PhotoDetail({ photo, onClose, onTags, recording, dispatch }) {
             </div>
           </div>
 
-          {/* ★AI 命名（Figma「AI命名」component 12044:3782） */}
-          <div className="flex shrink-0 flex-col gap-2.5 rounded-md border border-ai-200 bg-ai-50 p-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="size-5 text-ai-700" />
-              <p className="flex-1 text-base leading-6 font-bold text-ai-700">AI 命名</p>
-              <AiBadge />
-            </div>
-            <p className="text-xs leading-[18px] font-medium text-ai-500">
-              AI 依照片內容自動建議的分類標籤，可直接採用或改成自己的說法。
-            </p>
-
-            {aiEditing ? (
-              <input
-                autoFocus
-                value={aiName}
-                onChange={(e) => setAiName(e.target.value)}
-                onBlur={() => setAiEditing(false)}
-                className="w-full rounded-md border border-field-600 bg-white px-3 py-2.5 text-sm leading-5 text-ai-700 outline-none"
-              />
-            ) : (
-              <div className="flex h-12 w-full items-center rounded-md border border-neutral-200 bg-white px-3">
-                <p className="truncate text-sm leading-5 font-medium text-ai-700">{aiName}</p>
-              </div>
-            )}
-
-            <div className="flex items-center justify-end gap-2">
-              <button
-                onClick={() => setAiEditing(true)}
-                className="rounded-md border border-neutral-300 bg-white px-3.5 py-2 text-sm leading-5 font-bold text-neutral-700 shadow-xs"
-              >
-                修改
-              </button>
-              <button
-                onClick={adoptAi}
-                className="rounded-md bg-field-600 px-3.5 py-2 text-sm leading-5 font-bold text-white shadow-xs"
-              >
-                {aiAdopted ? '已採用' : '採用'}
-              </button>
-            </div>
-          </div>
         </div>
       </div>
 
